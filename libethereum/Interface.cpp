@@ -24,7 +24,14 @@ using namespace std;
 using namespace dev;
 using namespace eth;
 
-void Interface::submitTransaction(Secret const& _secret, u256 const& _value, Address const& _dest, bytes const& _data, u256 const& _gas, u256 const& _gasPrice, u256 const& _nonce)
+/**
+ * Maskash
+ * marsCatXdu
+ * 添加字段
+ * 
+ * 这个 submitTransaction 函数的最后一行调用的应该是 Client::submitTransaction(ts, secret)
+*/
+void Interface::submitTransaction(Secret const& _secret, u256 const& _value, Address const& _dest, bytes const& _data, u256 const& _gas, u256 const& _gasPrice, u256 const& _nonce, std::string const& _maskashMsg)
 {
 	TransactionSkeleton ts;
 	ts.creation = false;
@@ -34,6 +41,7 @@ void Interface::submitTransaction(Secret const& _secret, u256 const& _value, Add
 	ts.gas = _gas;
 	ts.gasPrice = _gasPrice;
 	ts.nonce = _nonce;
+	ts.maskashMsg = _maskashMsg;
 	submitTransaction(ts, _secret);
 }
 

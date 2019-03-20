@@ -214,6 +214,18 @@ void Executive::accrueSubState(SubState& _parentContext)
         _parentContext += m_ext->sub;
 }
 
+/**
+ * marsCatXdu Marked
+ * 这里应该是体现出了一个 eth 中关键的思想
+ * eth 的本质是维护和改变状态，而状态的改变由各种 Transaction 推动（或转账或调用）
+ * 将【带来改变的】Transaction 广播、打包、形成队列等，即是对【会带来状态改变的操作】进行收集的过程
+ * 但收集归收集，收集到了但在【apply】（是指生效）之前，所维护的【状态】依旧没有改变
+ * 那么，executive，这个名字的含义就非常显然了——执行，应用。
+ * 
+ * 这里传入的交易来自交易队列，交易队列在 TransactionQueue 构造。
+ * 但 TransactionQueue 中的 enqueue 函数看起来是一个交易一个交易传入的，就是说是在把【从广播听来的交易】入列？
+ * 处理 Block 中的交易的还另有单独的处理流程？还是说中间有一个什么函数做了个处理，把区块中的交易处理也归入了这一类呢？
+*/
 void Executive::initialize(Transaction const& _transaction)
 {
     m_t = _transaction;

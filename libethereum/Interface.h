@@ -80,7 +80,9 @@ public:
 	virtual h256 submitTransaction(TransactionSkeleton const& _t, Secret const& _secret) = 0;
 
 	/// Submits the given message-call transaction.
-	void submitTransaction(Secret const& _secret, u256 const& _value, Address const& _dest, bytes const& _data = bytes(), u256 const& _gas = 1000000, u256 const& _gasPrice = DefaultGasPrice, u256 const& _nonce = Invalid256);
+	/// Maskash marsCatXdu 添加 maskashMsg 字段。该构造器的默认 maskashMsg 值为 "Empty"
+	/// TODO: 将该值设置为一个结构化的初始值
+	void submitTransaction(Secret const& _secret, u256 const& _value, Address const& _dest, bytes const& _data = bytes(), u256 const& _gas = 1000000, u256 const& _gasPrice = DefaultGasPrice, u256 const& _nonce = Invalid256, std::string const& _extraMsg="Empty");
 
     /// Imports the given transaction into the transaction queue
 	virtual h256 importTransaction(Transaction const& _t) = 0;
