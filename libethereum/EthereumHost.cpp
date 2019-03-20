@@ -62,7 +62,12 @@ public:
             m_sync->restartSync();
         }
     }
-
+/**
+ * marsCatXdu Marked
+ * 
+ * 这个应该是入 tq 用的
+ * 
+*/
     void onPeerTransactions(std::shared_ptr<EthereumPeer> _peer, RLP const& _r) override
     {
         unsigned itemCount = _r.itemCount();
@@ -95,7 +100,12 @@ public:
             m_sync->restartSync();
         }
     }
-
+/**
+ * marsCatXdu Marked
+ * 
+ * 收块了
+ * 
+*/
     void onPeerBlockBodies(std::shared_ptr<EthereumPeer> _peer, RLP const& _r) override
     {
         try
@@ -123,7 +133,12 @@ public:
             m_sync->restartSync();
         }
     }
-
+/**
+ * marsCatXdu Marked
+ * 
+ * 应该是另外一种收块
+ * 
+*/
     void onPeerNewBlock(std::shared_ptr<EthereumPeer> _peer, RLP const& _r) override
     {
         try
@@ -419,6 +434,11 @@ void EthereumHost::completeSync()
     m_sync->completeSync();
 }
 
+
+/**
+ * marsCatXdu Marked
+ * 和网络进行同步，包含收块之类的
+*/
 void EthereumHost::doWork()
 {
     bool netChange = ensureInitialised();
@@ -426,7 +446,7 @@ void EthereumHost::doWork()
     // If we've finished our initial sync (including getting all the blocks into the chain so as to reduce invalid transactions), start trading transactions & blocks
     if (!isSyncing() && m_chain.isKnown(m_latestBlockSent))
     {
-        if (m_newTransactions)
+        if (m_newTransactions)   // 标记自己手里有没有新的交易？是标记自己要发的交易，还是还要继续广播自己收到的交易？
         {
             m_newTransactions = false;
             maintainTransactions();
@@ -449,7 +469,12 @@ void EthereumHost::doWork()
     // TODO: Figure out what to do with netChange.
     (void)netChange;
 }
-
+/**
+ * marsCatXdu Marked
+ * 名为包含的含义？从代码上看，这个类除了同步之外还有发送交易和块的功能，是指【向网络中包含】吗？
+ * 
+ * 感觉这里没啥要改的
+*/
 void EthereumHost::maintainTransactions()
 {
     // Send any new transactions.
@@ -536,6 +561,12 @@ tuple<vector<shared_ptr<EthereumPeer>>, vector<shared_ptr<EthereumPeer>>, vector
     return make_tuple(move(chosen), move(allowed), move(sessions));
 }
 
+
+/**
+ * marsCatXdu Marked
+ * 
+ * 应该是发块的了
+*/
 void EthereumHost::maintainBlocks(h256 const& _currentHash)
 {
     // Send any new blocks.
@@ -595,7 +626,10 @@ SyncStatus EthereumHost::status() const
 {
     return m_sync->status();
 }
-
+/**
+ * marsCatXdu Marked
+ * 应该是交易导入之后的操作 
+*/
 void EthereumHost::onTransactionImported(ImportResult _ir, h256 const& _h, h512 const& _nodeId)
 {
     auto session = peerSession(_nodeId);
