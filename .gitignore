@@ -76,5 +76,6 @@ browse.VC.db
 doc/html
 *.autosave
 node_modules/
+.vscode
 
 dependency_graph.svg

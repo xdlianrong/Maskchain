@@ -89,6 +89,10 @@ void SealEngineFace::populateFromParent(BlockHeader& _bi, BlockHeader const& _pa
     _bi.populateFromParent(_parent);
 }
 
+/**
+ * marsCatXdu Marked
+ * 验证交易gas相关
+*/
 void SealEngineFace::verifyTransaction(ImportRequirements::value _ir, TransactionBase const& _t,
                                        BlockHeader const& _header, u256 const& _gasUsed) const
 {
@@ -113,7 +117,10 @@ void SealEngineFace::verifyTransaction(ImportRequirements::value _ir, Transactio
     if ((_ir & ImportRequirements::TransactionBasic) && _t.baseGasRequired(schedule) > _t.gas())
         BOOST_THROW_EXCEPTION(OutOfGasIntrinsic() << RequirementError(
                                   (bigint)(_t.baseGasRequired(schedule)), (bigint)_t.gas()));
-
+/**
+ * marsCatXdu Marked
+ * 该处可能出现 gas 值计算的问题
+*/
     // Avoid transactions that would take us beyond the block gas limit.
     if (_gasUsed + (bigint)_t.gas() > _header.gasLimit())
         BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(

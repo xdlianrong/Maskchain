@@ -123,6 +123,19 @@ inline int jsToInt(std::string const& _s)
 	return ret;
 }
 
+/**
+ * XDLR marsCatXdu
+ * Maskash 添加字段解析函数——获取输入的json字段字符串，返回同样的字符串
+ * 解决潜在的 json 取值赋值引起的运算符重载问题
+*/
+inline std::string jsToString(std::string const& _s)
+{
+	std::string ret = "";
+	ret = _s;
+	// DEV_IGNORE_EXCEPTIONS(ret = std::stoi(_s, nullptr, 0));
+	return ret;
+}
+
 inline std::string jsToDecimal(std::string const& _s)
 {
 	return toString(jsToU256(_s));

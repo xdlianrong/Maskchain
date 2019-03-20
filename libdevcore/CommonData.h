@@ -88,6 +88,16 @@ template <class T> static bool isHash(std::string const& _hash)
 	return (_hash.size() == T::size * 2 || (_hash.size() == T::size * 2 + 2 && _hash.substr(0, 2) == "0x")) && isHex(_hash);
 }
 
+/**
+ * marsCatXdu
+ * Maskash 
+ * 解决潜在的json取值赋值引起的运算符重载问题
+ */
+inline std::string asString(std::string const& _b)
+{
+	return _b;
+}
+
 /// Converts byte array to a string containing the same (binary) data. Unless
 /// the byte array happens to contain ASCII data, this won't be printable.
 inline std::string asString(bytes const& _b)
