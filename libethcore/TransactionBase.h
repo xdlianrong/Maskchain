@@ -185,7 +185,7 @@ protected:
 	u256 m_gas;							///< The total gas to convert, paid for from sender's account. Any unused gas gets refunded once the contract is ended.
 	bytes m_data;						///< The data associated with the transaction, or the initialiser if it's a creation transaction.
 
-	std::string m_extraMsg;		// Maskash marsCatXdu 新增字符串字段
+	std::string m_maskashMsg;		// Maskash marsCatXdu 新增字符串字段
 
 	boost::optional<SignatureStruct> m_vrs;	///< The signature of the transaction. Encodes the sender.
 	int m_chainId = -4;					///< EIP155 value for calculating transaction hash https://github.com/ethereum/EIPs/issues/155

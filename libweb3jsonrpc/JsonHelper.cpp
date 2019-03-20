@@ -410,7 +410,7 @@ TransactionSkeleton toTransactionSkeleton(Json::Value const& _json)
         ret.nonce = jsToU256(_json["nonce"].asString());
 
     if (!_json["maskashMsg"].empty())                     // New field added in Maskash by marsCatXdu
-        ret.extraMsg = jsToString(_json["maskashMsg"].asString());// 不知道这样子行不行。已通过编译，不清楚是不是用了正确的重载函数
+        ret.maskashMsg = jsToString(_json["maskashMsg"].asString());// 不知道这样子行不行。已通过编译，不清楚是不是用了正确的重载函数
 
     return ret;
 }
