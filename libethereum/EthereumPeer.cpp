@@ -237,6 +237,7 @@ bool EthereumPeer::isCriticalSyncing() const
 }
 /**
  * marsCatXdu Marked
+ * 这里在1.5之后的版本中，名为 interpretCapabilityPacket
  * Capability,应该是正如其名，存储和传输的是真正【有效】的载荷
 */
 bool EthereumPeer::interpret(unsigned _id, RLP const& _r)

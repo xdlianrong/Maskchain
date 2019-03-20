@@ -34,6 +34,15 @@ using namespace std;
 using namespace dev;
 using namespace dev::p2p;
 
+/**
+ * marsCatXdu Marked
+ * 
+ * 这里应该定义了与信息长度相关的东西
+ * 又或者，在这里限制的仅仅是每一帧的长度，对交易数据没有影响
+ * 即：无论要传输尺寸为何的数据，都会到这里被拆分为数目与尺寸相匹配的 frame ？
+ * 
+*/
+
 RLPXFrameInfo::RLPXFrameInfo(bytesConstRef _header):
 	length((_header[0] * 256 + _header[1]) * 256 + _header[2]),
 	padding((16 - (length % 16)) % 16),

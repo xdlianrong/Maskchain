@@ -115,7 +115,12 @@ template <class T> vector<T> randomSelection(vector<T> const& _t, unsigned _n)
     }
     return ret;
 }
-
+/**
+ * marsCatXdu Marked
+ * 
+ * 应该是在这里传入接收到的各种包 RLP
+ * 
+*/
 bool Session::readPacket(uint16_t _capId, PacketType _t, RLP const& _r)
 {
     m_lastReceived = chrono::steady_clock::now();

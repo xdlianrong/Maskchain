@@ -240,7 +240,10 @@ Json::Value toJson(dev::eth::Transaction const& _t, bytes const& _rlp)
     res["tx"] = toJson(_t);
     return res;
 }
-
+/**
+ * marsCatXdu Marked
+ * 解析查询到的数据的 Json 解析器，应该别的能用到的解析器也就在这附近
+ */
 Json::Value toJson(dev::eth::LocalisedTransaction const& _t)
 {
     Json::Value res;
@@ -257,6 +260,7 @@ Json::Value toJson(dev::eth::LocalisedTransaction const& _t)
         res["blockHash"] = toJS(_t.blockHash());
         res["transactionIndex"] = toJS(_t.transactionIndex());
         res["blockNumber"] = toJS(_t.blockNumber());
+        res["maskashMsg"] = toJS(_t.maskashMsg()); /// Maskash marsCatXdu 添加新字段解析
     }
     return res;
 }
@@ -367,7 +371,9 @@ Json::Value toJsonByBlock(LocalisedLogEntries const& _entries)
 
     return toJson(entriesByBlock, order);
 }
-
+/**
+ * Maskash marsCatXdu Modfied
+*/
 TransactionSkeleton toTransactionSkeleton(Json::Value const& _json)
 {
     TransactionSkeleton ret;
@@ -375,7 +381,7 @@ TransactionSkeleton toTransactionSkeleton(Json::Value const& _json)
         return ret;
 
     if (!_json["from"].empty())
-        ret.from = jsToAddress(_json["from"].asString());
+        ret.from = jsToAddress(_json["from"].asString());       // 这玩意应该是个字符串进去的
     if (!_json["to"].empty() && _json["to"].asString() != "0x" && !_json["to"].asString().empty())
         ret.to = jsToAddress(_json["to"].asString());
     else
@@ -383,6 +389,10 @@ TransactionSkeleton toTransactionSkeleton(Json::Value const& _json)
 
     if (!_json["value"].empty())
         ret.value = jsToU256(_json["value"].asString());
+
+    // cout<<"_json[\"value\"]: "<<_json["value"]<<endl<<"_json[\"value\"].asString(): "<<_json["value"].asString()<<endl<<"jsToU256(_json[\"value\"].asString())"<<jsToU256(_json["value"].asString())<<endl;
+    // 上面这句话的输出分别为"0x1e240"、0x1e240、123456  （ethconsole中sendTransaction的value为123456，被提交到aleth的时候已经被改为了0x1e240，应该是ethconsole内部改的）
+    // _json["value"] 并不是一个 vector 那么简单，可能已经重载了<<运算符。
 
     if (!_json["gas"].empty())
         ret.gas = jsToU256(_json["gas"].asString());
@@ -398,6 +408,10 @@ TransactionSkeleton toTransactionSkeleton(Json::Value const& _json)
 
     if (!_json["nonce"].empty())
         ret.nonce = jsToU256(_json["nonce"].asString());
+
+    if (!_json["maskashMsg"].empty())                     // New field added in Maskash by marsCatXdu
+        ret.extraMsg = jsToString(_json["maskashMsg"].asString());// 不知道这样子行不行。已通过编译，不清楚是不是用了正确的重载函数
+
     return ret;
 }
 

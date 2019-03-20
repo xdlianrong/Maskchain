@@ -65,7 +65,10 @@ struct VMException;
 
 TransactionException toTransactionException(Exception const& _e);
 std::ostream& operator<<(std::ostream& _out, TransactionException const& _er);
-
+/**
+ * marsCatXdu Marked
+ * 怀疑会被存下来
+*/
 /// Description of the result of executing a transaction.
 struct ExecutionResult
 {
@@ -89,6 +92,7 @@ public:
 	Transaction() {}
 
 	/// Constructs from a transaction skeleton & optional secret.
+	/// Maskash marsCatXdu web3的 signTransaction 调用了这个，这个再顺着去调 base 。。。
 	Transaction(TransactionSkeleton const& _ts, Secret const& _s = Secret()): TransactionBase(_ts, _s) {}
 
 	/// Constructs a signed message-call transaction.
@@ -121,6 +125,10 @@ public:
 /// Nice name for vector of Transaction.
 using Transactions = std::vector<Transaction>;
 
+/**
+ * marsCatXdu Marked
+ * 从 web3 一路而来的 getTransactionByHash 最后叫了这个构造了个对象返了回去
+*/
 class LocalisedTransaction: public Transaction
 {
 public:

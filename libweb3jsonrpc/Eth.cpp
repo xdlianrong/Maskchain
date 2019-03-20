@@ -243,17 +243,22 @@ void Eth::setTransactionDefaults(TransactionSkeleton& _t)
 	if (!_t.from)
 		_t.from = m_ethAccounts.defaultTransactAccount();
 }
-
+/**
+ * marsCatXdu Modfied
+ * 从 TransactionSkeleton 构造交易并发送
+ * 
+ * 再往后应该就不用改了，直接发送了
+*/
 string Eth::eth_sendTransaction(Json::Value const& _json)
 {
 	try
 	{
-		TransactionSkeleton t = toTransactionSkeleton(_json);
-		setTransactionDefaults(t);
+		TransactionSkeleton t = toTransactionSkeleton(_json);	// 前后这俩都得改，后面的是解析器，前面的是结构
+		setTransactionDefaults(t);								// 处理 json 中没有 from 字段的情况
 		pair<bool, Secret> ar = m_ethAccounts.authenticate(t);
 		if (!ar.first)
 		{
-			h256 txHash = client()->submitTransaction(t, ar.second);
+			h256 txHash = client()->submitTransaction(t, ar.second);	// 提交构造好的交易。这个 client() 指的不像是 interface 
 			return toJS(txHash);
 		}
 		else
@@ -268,7 +273,10 @@ string Eth::eth_sendTransaction(Json::Value const& _json)
 		throw JsonRpcException(exceptionToErrorMessage());
 	}
 }
-
+/**
+ * marsCatXdu Modfied
+ * 进行签名与序列化
+*/
 Json::Value Eth::eth_signTransaction(Json::Value const& _json)
 {
 	try
@@ -277,9 +285,9 @@ Json::Value Eth::eth_signTransaction(Json::Value const& _json)
 		setTransactionDefaults(ts);
 		ts = client()->populateTransactionWithDefaults(ts);
 		pair<bool, Secret> ar = m_ethAccounts.authenticate(ts);
-		Transaction t(ts, ar.second);
+		Transaction t(ts, ar.second);							// 最终去调用了一个 TransactionBase 的构造器
 		RLPStream s;
-		t.streamRLP(s);
+		t.streamRLP(s);											// 调用了一个序列化用的函数
 		return toJson(t, s.out());
 	}
 	catch (Exception const&)
@@ -299,7 +307,12 @@ Json::Value Eth::eth_inspectTransaction(std::string const& _rlp)
 		BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
 	}
 }
-
+/**
+ * marsCatXdu Modfied
+ * 现在不用改
+ * 下去看了一眼，主要是 jsToBytes() 的工作，而这个玩意基本上（就）是一个转换器，构造了一个八位无符号整数 vector
+ * 名其曰 bytes
+*/
 string Eth::eth_sendRawTransaction(std::string const& _rlp)
 {
 	try

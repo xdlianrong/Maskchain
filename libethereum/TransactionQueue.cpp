@@ -352,7 +352,10 @@ void TransactionQueue::clear()
     m_future.clear();
     m_futureSize = 0;
 }
-
+/**
+ * marsCatXdu Marked
+ * 入列，不进行验证 
+*/
 void TransactionQueue::enqueue(RLP const& _data, h512 const& _nodeId)
 {
     bool queued = false;
@@ -375,6 +378,10 @@ void TransactionQueue::enqueue(RLP const& _data, h512 const& _nodeId)
         m_queueReady.notify_all();
 }
 
+/**
+ * marsCatXdu Marked
+ * 与验证相关了……其实也没那么相关，就是从 rlp 构造了个 Transaction 然后进入交易队列，验证应该还是得等 Executive
+*/
 void TransactionQueue::verifierBody()
 {
     while (!m_aborting)
@@ -393,6 +400,9 @@ void TransactionQueue::verifierBody()
         try
         {
             Transaction t(work.transaction, CheckTransaction::Cheap); //Signature will be checked later
+                                                                    // 用 Transaction 的构造器（实际上是TransactionBase的）
+                                                                    // 构造合格的交易然后再 import
+                                                                    // 这里面已经改好了
             ImportResult ir = import(t);
             m_onImport(ir, t.sha3(), work.nodeId);
         }
