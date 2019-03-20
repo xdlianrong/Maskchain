@@ -215,9 +215,8 @@ struct TransactionSkeleton
 	u256 gas = Invalid256;
 	u256 gasPrice = Invalid256;
 
-	int txType;		// 使用该字段表明交易类型。0：添加账户；1：删除账户；2：购币；3：零币转账；4：整币转账
 	std::string maskashMsg; 				// Maskash 一期工程中，先以字符串形式存储交易信息
-
+											// 其中有一个字段表明交易类型。0：添加账户；1：删除账户；2：购币；3：零币转账；4：整币转账
 	// TODO: 将对 maskashMsg 的解析添加到这里
 	std::string userReadable(bool _toProxy, std::function<std::pair<bool, std::string>(TransactionSkeleton const&)> const& _getNatSpec, std::function<std::string(Address const&)> const& _formatAddress) const;
 };

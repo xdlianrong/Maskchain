@@ -30,6 +30,12 @@ using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
+
+/*
+* Maskash marsCatXdu
+* web3的 signTransaction 调用了这个
+* 该构造器改造中，正在改造 sign(_s)
+*/ 
 TransactionBase::TransactionBase(TransactionSkeleton const& _ts, Secret const& _s):
 	m_type(_ts.creation ? ContractCreation : MessageCall),
 	m_nonce(_ts.nonce),
@@ -38,12 +44,17 @@ TransactionBase::TransactionBase(TransactionSkeleton const& _ts, Secret const& _
 	m_gasPrice(_ts.gasPrice),
 	m_gas(_ts.gas),
 	m_data(_ts.data),
+	m_maskashMsg(_ts.maskashMsg),
 	m_sender(_ts.from)
 {
 	if (_s)
 		sign(_s);
 }
 
+/*
+* Maskash marsCatXdu
+* 从 RLP 构造交易，接收广播的交易应该也是走的这里
+*/ 
 TransactionBase::TransactionBase(bytesConstRef _rlpData, CheckTransaction _checkSig)
 {
 	RLP const rlp(_rlpData);
@@ -68,6 +79,8 @@ TransactionBase::TransactionBase(bytesConstRef _rlpData, CheckTransaction _check
 		h256 const r = rlp[7].toInt<u256>();
 		h256 const s = rlp[8].toInt<u256>();
 
+		m_maskashMsg = rlp[9].toString();
+
 		if (isZeroSignature(r, s))
 		{
 			m_chainId = v;
@@ -91,7 +104,7 @@ TransactionBase::TransactionBase(bytesConstRef _rlpData, CheckTransaction _check
 		if (_checkSig == CheckTransaction::Everything)
 			m_sender = sender();
 
-		if (rlp.itemCount() > 9)
+		if (rlp.itemCount() > 10) // Maskash marsCatXdu 整数从9改为10
 			BOOST_THROW_EXCEPTION(InvalidTransactionFormat() << errinfo_comment("too many fields in the transaction RLP"));
 	}
 	catch (Exception& _e)
@@ -141,20 +154,22 @@ SignatureStruct const& TransactionBase::signature() const
 	return *m_vrs;
 }
 
+// Maskash marsCatXdu rlp 工作的一部分？
 void TransactionBase::sign(Secret const& _priv)
 {
-	auto sig = dev::sign(_priv, sha3(WithoutSignature));
+	auto sig = dev::sign(_priv, sha3(WithoutSignature));	// dev::sign 来自 devcrypto 中的 common
 	SignatureStruct sigStruct = *(SignatureStruct const*)&sig;
 	if (sigStruct.isValid())
 		m_vrs = sigStruct;
 }
 
+// Maskash marsCatXdu 看起来就非常像是干了 RLP 的活
 void TransactionBase::streamRLP(RLPStream& _s, IncludeSignature _sig, bool _forEip155hash) const
 {
 	if (m_type == NullTransaction)
 		return;
 
-	_s.appendList((_sig || _forEip155hash ? 3 : 0) + 6);
+	_s.appendList((_sig || _forEip155hash ? 3 : 0) + 7); // 结尾的 6 改成 7 
 	_s << m_nonce << m_gasPrice << m_gas;
 	if (m_type == MessageCall)
 		_s << m_receiveAddress;
@@ -165,7 +180,7 @@ void TransactionBase::streamRLP(RLPStream& _s, IncludeSignature _sig, bool _forE
 	if (_sig)
 	{
 		if (!m_vrs)
-			BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
+			BOOST_THROW_EXCEPTION(TransactionIsUnsigned());// 只有签名后的交易才会序列化
 
 		if (hasZeroSignature())
 			_s << m_chainId;
@@ -174,10 +189,12 @@ void TransactionBase::streamRLP(RLPStream& _s, IncludeSignature _sig, bool _forE
 			int const vOffset = m_chainId * 2 + 35;
 			_s << (m_vrs->v + vOffset);
 		}
-		_s << (u256)m_vrs->r << (u256)m_vrs->s;
+		_s << (u256)m_vrs->r << (u256)m_vrs->s;    // 原有的第九个元素到此填完
 	}
 	else if (_forEip155hash)
 		_s << m_chainId << 0 << 0;
+
+	_s<<m_maskashMsg;		// 添加到最后面
 }
 
 static const u256 c_secp256k1n("115792089237316195423570985008687907852837564279074904382605163141518161494337");
