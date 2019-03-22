@@ -131,6 +131,9 @@ add_subdirectory(libethashseal)
 add_subdirectory(libwebthree)
 add_subdirectory(libweb3jsonrpc)
 
+#XDLR marsCatXdu Maskash libsnark
+#add_subdirectory(libsnark)
+
 if (EVMJIT)
     add_subdirectory(evmjit)
 endif()
