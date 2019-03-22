@@ -1,0 +1,61 @@
+MerkleTreePath getMerkleTreePath_apk_r(){
+
+    //叶子
+    MerkleTree apkr;
+    MerkleTreePath mpr;
+    apkr.inite(4);
+
+     //叶子
+    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
+
+    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 apk_s=prf(ask_s);
+   
+    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
+
+    uint64_t v_1=5;
+    uint64_t v_2=0;
+    uint64_t v_3=0;
+
+    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
+    uint256 new_r=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+
+    uint256 u3=apk_r;
+    //uint256 u3=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad2");
+    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
+
+    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
+    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
+    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
+    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
+
+    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
+    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
+    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
+    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
+
+    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+
+    apkr.creatTree();
+    apkr.addLeaf(u1);
+    apkr.addLeaf(u2);
+    apkr.addLeaf(u13);
+    apkr.addLeaf(u4);
+    apkr.addLeaf(u5);
+    apkr.addLeaf(u6);
+    apkr.addLeaf(u7);
+    apkr.addLeaf(u8);
+    apkr.addLeaf(u9);
+    apkr.addLeaf(u10);
+    apkr.addLeaf(u11);
+    apkr.addLeaf(u12);
+    apkr.addLeaf(u13);
+    apkr.addLeaf(u14);
+    apkr.addLeaf(u15);
+    apkr.addLeaf(u16);
+    mpr=apkr.getPath(u3);
+    return mpr;

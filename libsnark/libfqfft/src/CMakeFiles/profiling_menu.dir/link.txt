@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++11 -Wall -Wextra -Wfatal-errors -pthread -ggdb3 -O2 -march=native -mtune=native   CMakeFiles/profiling_menu.dir/profiling/profiling_menu.cpp.o  -o ../profiling_menu -rdynamic 

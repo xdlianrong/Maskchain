@@ -1,0 +1,310 @@
+#include<iostream>
+#include<stdlib.h>
+#include<malloc.h>
+#include<vector>
+#include<cmath>
+#include "uint256.h"
+using namespace std;
+
+#define TREE_DEEPTH 4
+struct node     //定义二叉树节点数据结构
+{
+	node *parent;  
+    node *left;
+	node *right;
+	uint256 data;
+};
+class MerkleTreePath{
+    public:
+    std::vector<uint256> nodeHashList;
+    std::vector<uint256> parentList;
+    std::vector<int> pathisrightList;
+    uint256 root;
+    uint256 leaf;
+};
+
+class MerkleTree{
+
+private:
+    int _DEEPTH;
+	vector<node> Tree;  //存储树的向量
+    uint256 _d_leaf;
+    int index;
+	void updateTree();       //更新树  
+	void findLeafIndex(int leaf);      //给定一个叶节点的值，返回其在树中的索引
+	void getNodeHashList(uint256 leaf);
+	void getParentList(uint256 leaf);
+	void getPathisrightList(uint256 leaf);
+
+public:
+    MerkleTree(int deep){
+        _DEEPTH=deep+1;
+        _d_leaf=uint256S("1111111111111111111111111111111111111111111111111111111111111111");
+    }
+	vector<uint256> nodeHashList;   //存储需要被哈希的节点值
+	vector<uint256> parentList;    //父节点列表
+	vector<int> pathisrightList;    //存储节点是左节点还是右节点
+
+	void creatTree();     //从叶节点开始由下到上创建并初始化二叉树
+	void addLeaf(uint256 newLeaf);        //查找叶节点中未被更新的节点，并将其值更新为naeleaf
+	void deleteLeafValue(uint256 deleteLeaf);  //将指定位置的叶子结点恢复默认值
+	
+	uint256  getRoot();
+	MerkleTreePath getPath(uint256 leaf);
+	
+	void printTree();
+};
+
+void MerkleTree::creatTree()   //从叶节点开始由下到上创建并初始化二叉树
+{
+    
+	//初始化节点
+	for (int i = 0; i < ((int)pow(2, _DEEPTH) - 1); i++)  
+	{
+		node initNode;
+		initNode = { NULL, NULL, NULL, _d_leaf };     //节点的默认值
+		Tree.push_back(initNode);
+	}
+
+	//创建树
+	int nodeNum = 0;   //存储创建树的过程中已被创建过关系的节点数量
+	for (int j = _DEEPTH; j >0; j--)
+	{
+		int parentIndex, childIndex;
+		for (int i = nodeNum; i < nodeNum + (int)pow(2, j - 1); i++)
+		{
+			if (i < (int)pow(2, _DEEPTH - 1))
+			{
+				parentIndex = nodeNum + (int)pow(2, j - 1) + (i - nodeNum) / 2;   //父节点的索引
+				Tree.at(i).parent = &Tree[parentIndex];
+				//cout << Tree.at(i).data << endl;
+			}
+			else if (i == pow(2, _DEEPTH) - 2)
+			{
+				childIndex = (i - (int)pow(2, _DEEPTH - 1)) * 2;
+				Tree.at(i).left = &Tree.at(childIndex);
+				Tree.at(i).right = &Tree.at(childIndex + 1);
+				Tree.at(i).data = combine(Tree.at(childIndex).data , Tree.at(childIndex + 1).data); //父节点的data值为左右孩子节点的data相加
+				//cout << Tree.at(i).data << endl;
+			}
+			else
+			{
+				parentIndex = nodeNum + (int)pow(2, j - 1) + (i - nodeNum) / 2;
+				Tree.at(i).parent = &Tree.at(parentIndex);
+				childIndex = (i - (int)pow(2, _DEEPTH - 1)) * 2;         //孩子节点的索引
+				Tree.at(i).left = &Tree.at(childIndex);  
+				Tree.at(i).right = &Tree.at(childIndex+1);
+				Tree.at(i).data = combine(Tree.at(childIndex).data , Tree.at(childIndex + 1).data);  
+			}
+		}
+		nodeNum = nodeNum + pow(2, j - 1);
+	}
+}
+
+void MerkleTree::updateTree()   //根据被更新叶节点的索引来更新整个二叉树
+{
+	int nodeNum;         //计算已更新节点所在的那层以及以下各层的节点数和
+	for (int j = _DEEPTH; j >1; j--)
+	{
+		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+		(*Tree.at(index).parent).data = combine((*(*Tree.at(index).parent).left).data , (*(*Tree.at(index).parent).right).data);  //更新父节点的值
+		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+	}
+	cout << "update done" << endl;
+}
+
+
+void MerkleTree::addLeaf(uint256 newLeaf)
+{
+	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+	{
+		if (Tree.at(index).data == _d_leaf)
+			break;
+		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到，则置index为NULL
+		{
+			cout << "ERROR" << endl;
+			return;
+		}
+	}
+	Tree.at(index).data = newLeaf;   //更新节点的值
+	cout << index<< endl;
+	updateTree();      //更新树
+	cout << "add leaf done" << endl;
+}
+
+void MerkleTree::deleteLeafValue(uint256 deleteLeaf)
+{
+	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+	{
+		if (Tree.at(index).data == deleteLeaf)
+			break;
+		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+		{
+			cout << "ERROR" << endl;
+			return;
+		}
+	}
+	Tree.at(index).data = _d_leaf;    //更新节点的值
+	updateTree();      //更新树
+}
+
+uint256 MerkleTree::getRoot()
+{
+	return Tree.back().data;
+}
+
+void MerkleTree::getNodeHashList(uint256 leaf)
+{
+	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+	{
+		if (Tree.at(index).data == leaf)
+			break;
+		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+		{
+			cout << "ERROR" << endl;
+			return;
+		}
+	}
+
+	int nodeNum;
+	for (int j = _DEEPTH; j > 1; j--)
+	{
+		//判断index对应的叶节点是左节点还是右节点
+		if (index % 2 == 0)   //左节点
+		{
+			nodeHashList.push_back(Tree.at(index).data);
+			nodeHashList.push_back(Tree.at(index+1).data);
+		}
+		else    //右节点
+		{
+			nodeHashList.push_back(Tree.at(index-1).data);
+			nodeHashList.push_back(Tree.at(index).data);
+		}
+		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+	}
+}
+
+void MerkleTree::getParentList(uint256 leaf)
+{
+	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+	{
+		if (Tree.at(index).data == leaf)
+			break;
+		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+		{
+			cout << "ERROR" << endl;
+			return;
+		}
+	}
+	
+	int nodeNum;
+	for (int j = _DEEPTH; j > 1; j--)
+	{
+		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+		parentList.push_back(Tree.at(index).data);
+	}
+}
+
+void MerkleTree::getPathisrightList(uint256 leaf)
+{
+	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+	{
+		if (Tree.at(index).data == leaf)
+			break;
+		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+		{
+			cout << "ERROR" << endl;
+			return;
+		}
+	}
+	int nodeNum;
+	for (int j = _DEEPTH; j > 1; j--)
+	{
+		if (index % 2 == 0)   //左节点
+		{
+			pathisrightList.push_back(0);
+		}
+		else    //右节点
+		{
+			pathisrightList.push_back(1);
+		}
+		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+	}
+}
+MerkleTreePath MerkleTree::getPath(uint256 leaf)
+{
+    MerkleTreePath path;
+	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  
+	{
+		if (Tree.at(index).data == leaf)
+			break;
+		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+		{
+			cout << "ERROR" << endl;
+			return path;
+		}
+	}
+	getNodeHashList(leaf);
+	getParentList(leaf);
+    getPathisrightList(leaf);
+    
+    path.nodeHashList=nodeHashList;
+    path.parentList=parentList;
+    path.pathisrightList=pathisrightList;
+    path.root=Tree.back().data;
+    path.leaf=leaf;
+
+    return path;
+}
+
+void MerkleTree::printTree()
+{
+	for (int i = 0; i < Tree.size(); i++)
+	{
+		cout << Tree[i].data.ToString() << endl;
+	}
+}
+int main()
+{
+MerkleTreePath getMerkleTreePath(){
+    MerkleTree t1;
+    t1
+
+    //叶子
+    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
+
+    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 apk_s=prf(ask_s);
+   
+    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
+
+    uint64_t v_1=5;
+    uint64_t v_2=0;
+    uint64_t v_3=0;
+
+    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
+    uint256 new_r=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+
+    uint256 u3=cm(apk_s,v_1,old_r);
+    //uint256 u3=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad2");
+    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
+
+    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
+    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
+    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
+    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
+
+    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
+    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
+    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
+    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
+
+    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    }

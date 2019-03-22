@@ -1,0 +1,57 @@
+#include <ctime>
+#include "common/default_types/ec_pp.hpp"
+#include "common/profiling.hpp"
+#include "common/utils.hpp"
+#include "gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp"
+#include "common/default_types/r1cs_ppzksnark_pp.hpp"
+#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "zksnark/libsnark-usage-example/donator2/basic.cpp"
+#include "crypto/sha256.h"
+#include "uint256.h"
+
+#include <iostream>
+#include <sys/time.h>
+#include <fstream>
+
+using namespace std;
+using namespace libsnark;
+using namespace libff;
+
+using ppT = default_r1cs_ppzksnark_pp; 
+
+msgMintRequest makeMintRequest(uint256 Usk,uint256 p,uint256 v)
+{
+     Upk=prf(Usk);
+     kmint=cm(Upk,v,p);
+     pi=
+     v=v;
+     p=p;
+     return msgMintRequest;
+}
+
+msgMint makeMsgMint(uint256 kmint,uint256 v,uint256 upk)
+{
+  uint256 kmint=kmint;
+  return msgMint;
+}
+transferZero makeTransferZero(uint256 Rpk,uint256 pr,uint256 vr,uint256 Ssk,uint256 ps,uint256 vs)
+{
+    SNold=
+    krnew=cm(Rpk,vr,pr);
+
+    ksnew=cm(Ssk,vs,ps);
+    R=
+    pi=test_js_l();
+    Spk=prf(Ssk);
+    G=elg.encrypt(Spk,Rpk,vs,vr,vs-vr);
+    return transferZero;
+}
+transferOne makeTransferOne(uint256 Rpk,uint256 pr,uint256 vr,uint256 Ssk)
+{
+    SNold=sn(Ssk,ps);
+    krnew=cm(Rpk,vr,pr);
+    R=
+    pi=test_js_z();
+
+}
+
