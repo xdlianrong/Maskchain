@@ -3,13 +3,17 @@
 # Licensed under the GNU General Public License, Version 3. See the LICENSE file.
 
 cmake_minimum_required(VERSION 3.5.1)
-
+add_compile_options(-std=c++11 -DCURVE_ALT_BN128 -DNO_PROCPS -ggdb)
 include(evmc/cmake/cable/bootstrap.cmake)
 include(CableBuildInfo)
 include(CableBuildType)
 include(CableToolchains)
 include(GNUInstallDirs)
 
+INCLUDE_DIRECTORIES("./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
+#INCLUDE_DIRECTORIES("./libsnark/libff-n" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
+LINK_DIRECTORIES("./libsnark/libsnark/build" "./libsnark/libsnark/build/src" "./libsnark/libsnark/build/third_party" "./libsnark/libff/build/src" "./libsnark/zcash_w/build")
+LINK_DIRECTORIES("/usr/local/lib")
 if(UNIX)
     # Build deps with PIC to allow building shared libraries.
     set(toolchain cxx11-pic)

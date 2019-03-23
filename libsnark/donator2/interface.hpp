@@ -31,6 +31,9 @@ using namespace libff;
 using ppT = default_r1cs_ppzksnark_pp; 
 using FieldT = ppT::Fp_type;
 
+
+namespace msk{
+
 uint256 one_hash(const unsigned char *data, size_t len){
     CSHA256 hasher;
     hasher.Write(data, len);
@@ -2858,4 +2861,13 @@ bool transferOneVerify(uint256 SNold,uint256 krnew, uint256 cm_rt,uint256 apk_s_
       return 0;
     }
 };
+
+void isSnarkOk() {
+    std::cout<<"snark ok\n";
+}
+
+
+}
+
+
 #endif
