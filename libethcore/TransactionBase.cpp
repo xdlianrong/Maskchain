@@ -49,6 +49,7 @@ TransactionBase::TransactionBase(TransactionSkeleton const& _ts, Secret const& _
 	m_maskashMsg(_ts.maskashMsg),
 	m_sender(_ts.from)
 {
+	/*  Maskash 零知识证明套装测试点，测试完成
 	msk::isSnarkOk();
 	ppT::init_public_params();
     inhibit_profiling_info = true;
@@ -70,6 +71,7 @@ TransactionBase::TransactionBase(TransactionSkeleton const& _ts, Secret const& _
     transferZero tr= makeTransferZero<FieldT>( apk_r, new_r1,new_r2,v_1,ask_s,old_r,v_2);
     bool t=transferZeroVerify<FieldT>(tr.SNold ,tr.krnew,tr.ksnew, tr.data, tr.pi,tr.vk,tr.c_rt,tr.s_rt,tr.r_rt);
     cout<<t<<endl;
+	*/
 
 	if (_s)
 		sign(_s);
@@ -262,4 +264,28 @@ h256 TransactionBase::sha3(IncludeSignature _sig) const
 	if (_sig == WithSignature)
 		m_hashWith = ret;
 	return ret;
+}
+
+/// 构造：购币者发送给铸币者的 铸币请求 的核心信息
+std::string TransactionBase::makeMintReqString(uint256 Usk, uint256 p, uint256 v) {
+	msk::msgMintRequest mintReq = msk::makeMintRequest(uint256 Usk, uint256 p, uint256 v);
+	return mskTxTmp;
+}
+
+/// 构造：铸币者发送到网络的 铸币交易 的核心信息
+std::string TransactionBase::makeMintReqString(uint256 kmint, uint256 v, uint256 upk) {
+	msk::msgMint mintMsg = msk::makeMsgMint(uint256 kmint, uint256 v, uint256 upk);
+	return mskTxTmp;
+}
+
+/// 构造：零币转账发起者发送到网络的核心信息
+std::string TransactionBase::makeTransferZero(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk, uint256 ps, uint256 vs) {
+	msk::transferZero transerZ = msk::makeTransferZero(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk, uint256 ps, uint256 vs);
+	return mskTxTmp;
+}	
+
+/// 构造：整币转账发起者发送到网络的核心信息
+std::string TransactionBase::makeTransferOne(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk) {
+	msk::transferOne transferO = msk::makeTransferOne(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk);
+	return mskTxTmp;
 }

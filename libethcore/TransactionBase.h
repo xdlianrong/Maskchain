@@ -22,6 +22,8 @@
 #include <libdevcore/RLP.h>
 #include <libdevcore/SHA3.h>
 
+#include "../libsnark/donator2/interface.hpp"
+
 #include <boost/optional.hpp>
 
 namespace dev
@@ -136,8 +138,24 @@ public:
 	/// @returns the transaction-count of the sender.
 	u256 nonce() const { return m_nonce; }
 
-	// Maskash marsCatXdu 新增字符串字段
+
+
+	/// Maskash marsCatXdu 新增字符串字段
 	std::string maskashMsg() const { return m_maskashMsg; }
+
+	/// 构造：购币者发送给铸币者的 铸币请求 的核心信息
+	std::string makeMintReqString(uint256 Usk, uint256 p, uint256 v) { return mskTxTmp;	}
+
+	/// 构造：铸币者发送到网络的 铸币交易 的核心信息
+	std::string makeMintReqString(uint256 kmint, uint256 v, uint256 upk) { return mskTxTmp; }
+
+	/// 构造：零币转账发起者发送到网络的核心信息
+	std::string makeTransferZero(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk, uint256 ps, uint256 vs) { return mskTxTmp; }	
+
+	/// 构造：整币转账发起者发送到网络的核心信息
+	std::string makeTransferOne(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk) { return mskTxTmp; }
+
+
 
 	/// Sets the nonce to the given value. Clears any signature.
 	void setNonce(u256 const& _n) { clearSignature(); m_nonce = _n; }
@@ -185,7 +203,8 @@ protected:
 	u256 m_gas;							///< The total gas to convert, paid for from sender's account. Any unused gas gets refunded once the contract is ended.
 	bytes m_data;						///< The data associated with the transaction, or the initialiser if it's a creation transaction.
 
-	std::string m_maskashMsg;		// Maskash marsCatXdu 新增字符串字段
+	std::string mskTxTmp;				// Maskash marsCatXdu Maskash交易信息的临时字符串
+	std::string m_maskashMsg;			// Maskash marsCatXdu 新增字符串字段
 
 	boost::optional<SignatureStruct> m_vrs;	///< The signature of the transaction. Encodes the sender.
 	int m_chainId = -4;					///< EIP155 value for calculating transaction hash https://github.com/ethereum/EIPs/issues/155
@@ -197,6 +216,8 @@ protected:
 /// Nice name for vector of Transaction.
 using TransactionBases = std::vector<TransactionBase>;
 
+
+// marsCatXdu marked   这个输出到哪里了？
 /// Simple human-readable stream-shift operator.
 inline std::ostream& operator<<(std::ostream& _out, TransactionBase const& _t)
 {
