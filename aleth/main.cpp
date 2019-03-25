@@ -62,12 +62,30 @@
 
 #include <aleth/buildinfo.h>
 
+#include "libsnark/donator2/interface.h"
+
+using namespace msk;
 using namespace std;
 using namespace dev;
 using namespace dev::p2p;
 using namespace dev::eth;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
+
+
+
+
+
+using namespace libsnark;
+using namespace libff;
+
+using ppT = default_r1cs_ppzksnark_pp; 
+using FieldT = ppT::Fp_type;
+
+
+
+
+
 
 namespace
 {
@@ -169,6 +187,8 @@ int main(int argc, char** argv)
 {
     setDefaultOrCLocale();
 
+    //msk::isSnarkOk();
+    
     // Init secp256k1 context by calling one of the functions.
     toPublic({});
 
@@ -1104,6 +1124,8 @@ int main(int argc, char** argv)
 
         cout << "JSONRPC Admin Session Key: " << jsonAdmin << "\n";
     }
+
+    // isSnarkOk();
 
     for (auto const& p: preferredNodes)
         if (p.second.second)

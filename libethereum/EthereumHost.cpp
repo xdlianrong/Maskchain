@@ -217,7 +217,7 @@ public:
         }
         else // block id is a number
         {
-            auto n = _blockId.toInt<bigint>();
+            auto n = _blockId.toInt<dev::bigint>();
             cnetlog << "GetBlockHeaders (" << n << " max: " << _maxHeaders << " skip: " << _skip
                     << (_reverse ? " reverse" : "") << ")";
 
@@ -228,7 +228,7 @@ public:
                     blockHash = {};
                 else
                 {
-                    bigint top = n + uint64_t(step) * (numHeadersToSend - 1);
+                    dev::bigint top = n + uint64_t(step) * (numHeadersToSend - 1);
                     if (top > lastBlock)
                     {
                         numHeadersToSend = (lastBlock - static_cast<unsigned>(n)) / step + 1;

@@ -55,8 +55,8 @@ public:
     };
 
     StandardTrace();
-    void operator()(uint64_t _steps, uint64_t _PC, Instruction _inst, bigint _newMemSize,
-        bigint _gasCost, bigint _gas, VMFace const* _vm, ExtVMFace const* _extVM);
+    void operator()(uint64_t _steps, uint64_t _PC, Instruction _inst, dev::bigint _newMemSize,
+        dev::bigint _gasCost, dev::bigint _gas, VMFace const* _vm, ExtVMFace const* _extVM);
 
     void setShowMnemonics() { m_showMnemonics = true; }
     void setOptions(DebugOptions _options) { m_options = _options; }
@@ -67,8 +67,8 @@ public:
 
     OnOpFunc onOp()
     {
-        return [=](uint64_t _steps, uint64_t _PC, Instruction _inst, bigint _newMemSize,
-                   bigint _gasCost, bigint _gas, VMFace const* _vm, ExtVMFace const* _extVM) {
+        return [=](uint64_t _steps, uint64_t _PC, Instruction _inst, dev::bigint _newMemSize,
+                   dev::bigint _gasCost, dev::bigint _gas, VMFace const* _vm, ExtVMFace const* _extVM) {
             (*this)(_steps, _PC, _inst, _newMemSize, _gasCost, _gas, _vm, _extVM);
         };
     }

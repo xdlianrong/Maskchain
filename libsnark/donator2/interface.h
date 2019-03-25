@@ -24,123 +24,71 @@
 #include <fstream>
 
 
-using namespace std;
-using namespace libsnark;
-using namespace libff;
-
-using ppT = default_r1cs_ppzksnark_pp; 
+using ppT = libsnark::default_r1cs_ppzksnark_pp; 
 using FieldT = ppT::Fp_type;
 
 
 namespace msk{
 
-uint256 one_hash(const unsigned char *data, size_t len){
-    CSHA256 hasher;
-    hasher.Write(data, len);
+void isSnarkOk();
 
-    uint256 result;
-    hasher.Finalize(result.begin());
+uint256 one_hash(const unsigned char *data, size_t len);
 
-    return result;
-}
-std::vector<unsigned char> convertIntToVectorLE(const uint64_t val_int) {
-    std::vector<unsigned char> bytes;
+std::vector<unsigned char> convertIntToVectorLE(const uint64_t val_int);
 
-    for(size_t i = 0; i < 8; i++) {
-        bytes.push_back(val_int >> (i * 8));
-    }
-
-    return bytes;
-}
-std::vector<bool> convertBytesVectorToVector(const std::vector<unsigned char>& bytes) {
-    std::vector<bool> ret;
-    ret.resize(bytes.size() * 8);
-
-    unsigned char c;
-    for (size_t i = 0; i < bytes.size(); i++) {
-        c = bytes.at(i);
-        for (size_t j = 0; j < 8; j++) {
-            ret.at((i*8)+j) = (c >> (7-j)) & 1;
-        }
-    }
-
-    return ret;
-}
-//uint256->vector<bool>->pb_variable_array<FieldT>，使用fill_with_bits：
+std::vector<bool> convertBytesVectorToVector(const std::vector<unsigned char>& bytes);
+//uint256->vector<bool>->libsnark::pb_variable_array<FieldT>，使用fill_with_bits：
 //zk_vpub_old.fill_with_bits(this->pb,uint64_to_bool_vector(vpub_old)));
-std::vector<bool> uint256_to_bool_vector(uint256 input) {
-    std::vector<unsigned char> input_v(input.begin(), input.end());
+std::vector<bool> uint256_to_bool_vector(uint256 input);
 
-    return convertBytesVectorToVector(input_v);
-}
-
-std::vector<bool> uint64_to_bool_vector(uint64_t input) {
-    auto num_bv = convertIntToVectorLE(input);
-    
-    return convertBytesVectorToVector(num_bv);
-}
+std::vector<bool> uint64_to_bool_vector(uint64_t input);
 
 template<typename T>
 T swap_endianness_u64(T v) {
     if (v.size() != 64) {
         throw std::length_error("invalid bit length for 64-bit unsigned integer");
     }
-
     for (size_t i = 0; i < 4; i++) {
         for (size_t j = 0; j < 8; j++) {
             std::swap(v[i*8 + j], v[((7-i)*8)+j]);
         }
     }
-
     return v;
 }
 
 template<typename FieldT>
-linear_combination<FieldT> packed_addition(pb_variable_array<FieldT> input) {
+libsnark::linear_combination<FieldT> packed_addition(libsnark::pb_variable_array<FieldT> input) {
     auto input_swapped = swap_endianness_u64(input);
 
-    return pb_packing_sum<FieldT>(pb_variable_array<FieldT>(
+    return libsnark::pb_packing_sum<FieldT>(libsnark::pb_variable_array<FieldT>(
         input_swapped.rbegin(), input_swapped.rend()
     ));
-}
-
-
-uint256 combine(const uint256& a, const uint256& b)
-{
-    uint256 res ;
-
-    CSHA256 hasher;
-    hasher.Write(a.begin(), 32);
-    hasher.Write(b.begin(), 32);
-    hasher.FinalizeNoPadding(res.begin());
-
-    return res;
 }
 
 //------------公私匙部分-----------------------------
 //用户公钥由私钥哈希而来
 template<typename FieldT>
-class prf_gadget : gadget<FieldT> {
+class prf_gadget : libsnark::gadget<FieldT> {
 private:
-    std::shared_ptr<block_variable<FieldT>> block;
-    std::shared_ptr<sha256_compression_function_gadget<FieldT>> hasher;
+    std::shared_ptr<libsnark::block_variable<FieldT>> block;
+    std::shared_ptr<libsnark::sha256_compression_function_gadget<FieldT>> hasher;
 
 public:
     prf_gadget(
-        protoboard<FieldT> &pb,
-        pb_variable_array<FieldT>& a_sk,
-        std::shared_ptr<digest_variable<FieldT>> result
-    ) : gadget<FieldT>(pb) {
+        libsnark::protoboard<FieldT> &pb,
+        libsnark::pb_variable_array<FieldT>& a_sk,
+        std::shared_ptr<libsnark::digest_variable<FieldT>> result
+    ) : libsnark::gadget<FieldT>(pb) {
 
         //H(a_sk,a_sk)
-        block.reset(new block_variable<FieldT>(pb, {
+        block.reset(new libsnark::block_variable<FieldT>(pb, {
             a_sk,
             a_sk
         }, ""));
 
-        pb_linear_combination_array<FieldT> IV = SHA256_default_IV(pb);
+        libsnark::pb_linear_combination_array<FieldT> IV = SHA256_default_IV(pb);
 
-        hasher.reset(new sha256_compression_function_gadget<FieldT>(
+        hasher.reset(new libsnark::sha256_compression_function_gadget<FieldT>(
             pb,
             IV,
             block->bits,
@@ -157,41 +105,32 @@ public:
         hasher->generate_r1cs_witness();
     }
 };
-uint256 prf(uint256 a_sk){
-    CSHA256 hasher;
-   
-    uint256 result;
 
-    //H(a_sk a_sk)
-    hasher.Write(a_sk.begin(), 32);
-    hasher.Write(a_sk.begin(), 32);
-    hasher.FinalizeNoPadding(result.begin());
-  
-    return result;
-}
+uint256 prf(uint256 a_sk);
+
 template<typename FieldT>
-class sn_gadget : gadget<FieldT> {
+class sn_gadget : libsnark::gadget<FieldT> {
 private:
-    std::shared_ptr<block_variable<FieldT>> block;
-    std::shared_ptr<sha256_compression_function_gadget<FieldT>> hasher;
+    std::shared_ptr<libsnark::block_variable<FieldT>> block;
+    std::shared_ptr<libsnark::sha256_compression_function_gadget<FieldT>> hasher;
 
 public:
     sn_gadget(
-        protoboard<FieldT> &pb,
-        pb_variable_array<FieldT>& a_sk,
-        pb_variable_array<FieldT>& r,
-        std::shared_ptr<digest_variable<FieldT>> result
-    ) : gadget<FieldT>(pb) {
+        libsnark::protoboard<FieldT> &pb,
+        libsnark::pb_variable_array<FieldT>& a_sk,
+        libsnark::pb_variable_array<FieldT>& r,
+        std::shared_ptr<libsnark::digest_variable<FieldT>> result
+    ) : libsnark::gadget<FieldT>(pb) {
        
         //H(a_sk,r)
-        block.reset(new block_variable<FieldT>(pb, {
+        block.reset(new libsnark::block_variable<FieldT>(pb, {
             a_sk,
             r
         }, ""));
 
-        pb_linear_combination_array<FieldT> IV = SHA256_default_IV(pb);
+        libsnark::pb_linear_combination_array<FieldT> IV = SHA256_default_IV(pb);
 
-        hasher.reset(new sha256_compression_function_gadget<FieldT>(
+        hasher.reset(new libsnark::sha256_compression_function_gadget<FieldT>(
             pb,
             IV,
             block->bits,
@@ -207,72 +146,63 @@ public:
         hasher->generate_r1cs_witness();
     }
 };
-uint256 sn(uint256 a_sk,uint256 r){
-    CSHA256 hasher;
-  
-    uint256 result;
 
-    //H(a_sk r)
-    hasher.Write(a_sk.begin(), 32);
-    hasher.Write(r.begin(), 32);
-    hasher.FinalizeNoPadding(result.begin());
-  
-    return result;
-}
+uint256 sn(uint256 a_sk,uint256 r);
+
 template<typename FieldT>
-class comm_gadget : gadget<FieldT> {
+class comm_gadget : libsnark::gadget<FieldT> {
 private:
-    std::shared_ptr<block_variable<FieldT>> block1;
-    std::shared_ptr<block_variable<FieldT>> block2;
-    std::shared_ptr<sha256_compression_function_gadget<FieldT>> hasher1;
-    std::shared_ptr<digest_variable<FieldT>> intermediate_hash;
-    std::shared_ptr<sha256_compression_function_gadget<FieldT>> hasher2;
+    std::shared_ptr<libsnark::block_variable<FieldT>> block1;
+    std::shared_ptr<libsnark::block_variable<FieldT>> block2;
+    std::shared_ptr<libsnark::sha256_compression_function_gadget<FieldT>> hasher1;
+    std::shared_ptr<libsnark::digest_variable<FieldT>> intermediate_hash;
+    std::shared_ptr<libsnark::sha256_compression_function_gadget<FieldT>> hasher2;
 
 public:
     comm_gadget(
-        protoboard<FieldT> &pb,
-        pb_variable_array<FieldT>& a_pk,
-        pb_variable_array<FieldT>& v,
-        pb_variable_array<FieldT>& r,
-        std::shared_ptr<digest_variable<FieldT>> result
-    ) : gadget<FieldT>(pb) {
+        libsnark::protoboard<FieldT> &pb,
+        libsnark::pb_variable_array<FieldT>& a_pk,
+        libsnark::pb_variable_array<FieldT>& v,
+        libsnark::pb_variable_array<FieldT>& r,
+        std::shared_ptr<libsnark::digest_variable<FieldT>> result
+    ) : libsnark::gadget<FieldT>(pb) {
 
-        intermediate_hash.reset(new digest_variable<FieldT>(pb, 256, ""));
-        cout<<"com1 "<<endl;
+        intermediate_hash.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        std::cout<<"com1 "<<std::endl;
         //H(a_pk,v)
-        block1.reset(new block_variable<FieldT>(pb, {
+        block1.reset(new libsnark::block_variable<FieldT>(pb, {
             a_pk,
             v,
             v,
             v,
             v
         }, ""));
-        cout<<"com2 "<<endl;
-        pb_linear_combination_array<FieldT> IV = SHA256_default_IV(pb);
+        std::cout<<"com2 "<<std::endl;
+        libsnark::pb_linear_combination_array<FieldT> IV = SHA256_default_IV(pb);
 
-        hasher1.reset(new sha256_compression_function_gadget<FieldT>(
+        hasher1.reset(new libsnark::sha256_compression_function_gadget<FieldT>(
             pb,
             IV,
             block1->bits,
             *intermediate_hash,
         ""));
-        cout<<"com3 "<<endl;
-        pb_variable_array<FieldT> intermediate_block;
+        std::cout<<"com3 "<<std::endl;
+        libsnark::pb_variable_array<FieldT> intermediate_block;
         intermediate_block.insert(intermediate_block.end(), (*intermediate_hash).bits.begin(), (*intermediate_hash).bits.end());
-        cout<<"com4 "<<endl;
+        std::cout<<"com4 "<<std::endl;
         //H(H(a_pk,v),r)
-        block2.reset(new block_variable<FieldT>(pb, {
+        block2.reset(new libsnark::block_variable<FieldT>(pb, {
             intermediate_block,
             r
         }, ""));
-        cout<<"com5 "<<endl;
-        hasher2.reset(new sha256_compression_function_gadget<FieldT>(
+        std::cout<<"com5 "<<std::endl;
+        hasher2.reset(new libsnark::sha256_compression_function_gadget<FieldT>(
             pb,
             IV,
             block2->bits,
             *result,
         ""));
-        cout<<"com6 "<<endl;
+        std::cout<<"com6 "<<std::endl;
     }
 
     void generate_r1cs_constraints() {
@@ -287,38 +217,9 @@ public:
 };
 
 
-uint256 cm(uint256 a_pk, int64_t v, uint256 r) {
-    CSHA256 hasher1;
-    CSHA256 hasher2;
+uint256 cm(uint256 a_pk, int64_t v, uint256 r);
 
-    uint256 imt;
-    uint256 result;
-
-    //H(a_pk )
-    hasher1.Write(a_pk.begin(), 32);
-
-    //H(apk,v,v,v,v)
-    auto value_vec = convertIntToVectorLE(v);
-    hasher1.Write(&value_vec[0], value_vec.size());
-    hasher1.Write(&value_vec[0], value_vec.size());
-    hasher1.Write(&value_vec[0], value_vec.size());
-    hasher1.Write(&value_vec[0], value_vec.size());
-    hasher1.FinalizeNoPadding(imt.begin());
-
-    //H( H(apk,v,v,v,v),r)
-    hasher2.Write(imt.begin(), 32);
-    hasher2.Write(r.begin(), 32);
-    hasher2.FinalizeNoPadding(result.begin());
-  
-    return result;
-}
-void outBoolVector(std::vector<bool> &v){
-     for(size_t i=0;i<v.size();i++){
-
-        cout<<v[i]<<" , ";
-    }
-    cout<<endl;
-}
+void outBoolVector(std::vector<bool> &v);
 
 
 template<typename FieldT>
@@ -356,60 +257,19 @@ std::vector<bool> convertFpToBoolVector(FieldT fp){
 
 
 //十六进制字符串转换为字节流  
-void HexStrToByte(const char* source, unsigned char* dest, int sourceLen)  
-{  
-    short i;  
-    unsigned char highByte, lowByte;  
-          
-    for (i = 0; i < sourceLen; i += 2)  
-    {  
-        highByte = toupper(source[i]);  
-        lowByte  = toupper(source[i + 1]);  
-      
-        if (highByte > 0x39)  
-            highByte -= 0x37;  
-        else  
-            highByte -= 0x30;  
-      
-        if (lowByte > 0x39)  
-            lowByte -= 0x37;  
-        else  
-            lowByte -= 0x30;  
-      
-        dest[i / 2] = (highByte << 4) | lowByte;  
-    }  
-    return ;  
-}  
-void Hex2Str( const char *sSrc,  char *sDest, int nSrcLen )  
-{  
-    int  i;  
-    char szTmp[3];  
-  
-    for( i = 0; i < nSrcLen; i++ )  
-    {  
-        sprintf( szTmp, "%02x", (unsigned char) sSrc[i] );  
-        memcpy( &sDest[i * 2], szTmp, 2 );  
-    }  
-    return ;  
-}
-typedef bigint<alt_bn128_r_limbs> bigint_r;
+void HexStrToByte(const char* source, unsigned char* dest, int sourceLen);
+
+void Hex2Str( const char *sSrc,  char *sDest, int nSrcLen );
+
+typedef libff::bigint<libff::alt_bn128_r_limbs> bigint_r;
 #define bigint_len 32
 
 //通过拷贝二进制数组构造bigint
-void byteToBigint(bigint_r &b,unsigned char *bytebuf){
-    memcpy(&b.data[0],bytebuf,bigint_len);
-}
+void byteToBigint(bigint_r &b,unsigned char *bytebuf);
 
-void byteToint64(uint64_t &i64,unsigned char* buf){
-    memcpy(&i64,buf,8);
-}
+void byteToint64(uint64_t &i64,unsigned char* buf);
 
-uint256 byteToUint256(unsigned char *bytebuf){
-    char hex[65];
-    hex[64]=0;
-    Hex2Str((char*)bytebuf,hex,32);
-    return uint256S(hex);
-}
+uint256 byteToUint256(unsigned char *bytebuf);
 
 //二进制字节数组转换为Fp
 template<typename FieldT>
@@ -449,9 +309,9 @@ class Elgamal_2apk_3v{
     FieldT c1_tmp2,c2_tmp2;
     FieldT c1_tmp3,c2_tmp3;
 
-    string c1_tmp1_bigintstr1,c2_tmp1_bigintstr1;
-    string c1_tmp2_bigintstr2,c2_tmp2_bigintstr2;
-    string c1_tmp3_bigintstr3,c2_tmp3_bigintstr3;
+    std::string c1_tmp1_bigintstr1,c2_tmp1_bigintstr1;
+    std::string c1_tmp2_bigintstr2,c2_tmp2_bigintstr2;
+    std::string c1_tmp3_bigintstr3,c2_tmp3_bigintstr3;
 
     char encrypted_hex_str[64*6+1];
     unsigned char encrypted_data[32*6];
@@ -483,9 +343,9 @@ public:
     FieldT m3;
 
     //随机数对应的向量
-    vector<FieldT> v_y1;
-    vector<FieldT> v_y2;
-    vector<FieldT> v_y3;
+    std::vector<FieldT> v_y1;
+    std::vector<FieldT> v_y2;
+    std::vector<FieldT> v_y3;
 
     //加密的结果
     FieldT c1_result1,c2_result1;
@@ -523,12 +383,12 @@ public:
     // v_p实付金额,v_c找零金额，譬如总金额5,找零3，则实付2
     void encrypt(uint256 apk_s,uint256 apk_r,uint64_t v_1,uint64_t v_2,uint64_t v_3){
     
-        cout<<"before encrypt:"<<endl;
-        cout<<apk_s.ToString()<<endl;
-        cout<<apk_r.ToString()<<endl;
+        std::cout<<"before encrypt:"<<std::endl;
+        std::cout<<apk_s.ToString()<<std::endl;
+        std::cout<<apk_r.ToString()<<std::endl;
 
-        cout<<v_1<<endl;
-        cout<<v_2<<endl;
+        std::cout<<v_1<<std::endl;
+        std::cout<<v_2<<std::endl;
 
         fillBuf(apk_s,apk_r,v_1,v_2,v_3);
         splitBuf_31();
@@ -634,7 +494,7 @@ protected:
         fillTmp_31to32(buf+31,tmp2);
         fillTmp_31to32(buf+31+31,tmp3);
     }
-    FieldT getRandom(vector<FieldT> &Y){
+    FieldT getRandom(std::vector<FieldT> &Y){
         srand(unsigned(time(0)));
         FieldT y = FieldT::zero();
         for(int i=0;i<253;i++){
@@ -645,8 +505,8 @@ protected:
     }
     void restoreFromByteBuf(unsigned char *bytebuf){
        
-        cout<<"before restore:"<<endl;
-        cout<<"restore from buf:"<<endl;
+        std::cout<<"before restore:"<<std::endl;
+        std::cout<<"restore from buf:"<<std::endl;
 
         apk_s=*(uint256*)bytebuf;
         apk_r=*(uint256*)(bytebuf+32);
@@ -658,25 +518,26 @@ protected:
     }
 };
 
-template<typename FieldT>
-class exp_gadget : public gadget<FieldT> {
-private:
-    pb_variable_array<FieldT> _A;
-    pb_variable_array<FieldT> temp1;
-    pb_variable_array<FieldT> temp2;
-    pb_variable_array<FieldT> temp3;
-    //FieldT g;
-    pb_variable<FieldT> g;
-public:
-    const pb_linear_combination_array<FieldT> A;
-    const pb_variable<FieldT> result;
 
-    //exp_gadget(FieldT g, protoboard<FieldT>& pb,
-    exp_gadget(pb_variable<FieldT> &g, protoboard<FieldT>& pb,
-                         const pb_linear_combination_array<FieldT> &A,//y
-                         const pb_variable<FieldT> &result,
+template<typename FieldT>
+class exp_gadget : public libsnark::gadget<FieldT> {
+private:
+    libsnark::pb_variable_array<FieldT> _A;
+    libsnark::pb_variable_array<FieldT> temp1;
+    libsnark::pb_variable_array<FieldT> temp2;
+    libsnark::pb_variable_array<FieldT> temp3;
+    //FieldT g;
+    libsnark::pb_variable<FieldT> g;
+public:
+    const libsnark::pb_linear_combination_array<FieldT> A;
+    const libsnark::pb_variable<FieldT> result;
+
+    //exp_gadget(FieldT g, libsnark::protoboard<FieldT>& pb,
+    exp_gadget(libsnark::pb_variable<FieldT> &g, libsnark::protoboard<FieldT>& pb,
+                         const libsnark::pb_linear_combination_array<FieldT> &A,//y
+                         const libsnark::pb_variable<FieldT> &result,
                          const std::string &annotation_prefix="") :
-        gadget<FieldT>(pb, annotation_prefix), A(A), g(g), result(result)
+        libsnark::gadget<FieldT>(pb, annotation_prefix), A(A), g(g), result(result)
     {
         
         _A.allocate(pb, A.size(), FMT(this->annotation_prefix, " _A"));
@@ -688,6 +549,8 @@ public:
     void generate_r1cs_constraints();
     void generate_r1cs_witness();
 };
+
+
 template<typename FieldT>
 void exp_gadget<FieldT>::generate_r1cs_constraints()
 {
@@ -695,19 +558,19 @@ void exp_gadget<FieldT>::generate_r1cs_constraints()
     for (size_t i = 0; i < A.size(); ++i)
     {
       this->pb.add_r1cs_constraint(
-        r1cs_constraint<FieldT>(FieldT::one() - A[i], FieldT::one(), _A[i]),
+        libsnark::r1cs_constraint<FieldT>(FieldT::one() - A[i], FieldT::one(), _A[i]),
         FMT(this->annotation_prefix, " S_%zu", i));
       this->pb.add_r1cs_constraint(
-        r1cs_constraint<FieldT>(A[i], this->pb.val(g) ^ ((FieldT::one()*2) ^ bigint_r(i)).as_bigint(), temp1[i]),
+        libsnark::r1cs_constraint<FieldT>(A[i], this->pb.val(g) ^ ((FieldT::one()*2) ^ bigint_r(i)).as_bigint(), temp1[i]),
         FMT(this->annotation_prefix, " S_%zu", i));
       this->pb.add_r1cs_constraint(
-        r1cs_constraint<FieldT>(_A[i] + temp1[i] , FieldT::one(), temp2[i]),
+        libsnark::r1cs_constraint<FieldT>(_A[i] + temp1[i] , FieldT::one(), temp2[i]),
         FMT(this->annotation_prefix, " S_%zu", i));     
     }
     for (size_t i = 0; i < temp3.size()+1; ++i)
     {
       this->pb.add_r1cs_constraint(
-        r1cs_constraint<FieldT>(i==0 ? temp2[0] : temp3[i-1], temp2[i+1], i==temp3.size() ? result : temp3[i]),
+        libsnark::r1cs_constraint<FieldT>(i==0 ? temp2[0] : temp3[i-1], temp2[i+1], i==temp3.size() ? result : temp3[i]),
         FMT(this->annotation_prefix, " S_%zu", i));
     }
 
@@ -730,20 +593,20 @@ void exp_gadget<FieldT>::generate_r1cs_witness()
 }
 
 template<typename FieldT>
-class binary_gadget : public gadget<FieldT> {
+class binary_gadget : public libsnark::gadget<FieldT> {
 private:
-    pb_variable_array<FieldT> temp1;
-    pb_variable_array<FieldT> temp2;
+    libsnark::pb_variable_array<FieldT> temp1;
+    libsnark::pb_variable_array<FieldT> temp2;
     FieldT g;
 public:
-    const pb_linear_combination_array<FieldT> A;
-    const pb_variable<FieldT> result;
+    const libsnark::pb_linear_combination_array<FieldT> A;
+    const libsnark::pb_variable<FieldT> result;
 
-    binary_gadget(protoboard<FieldT>& pb,
-                         const pb_linear_combination_array<FieldT> &A,//y
-                         const pb_variable<FieldT> &result,
+    binary_gadget(libsnark::protoboard<FieldT>& pb,
+                         const libsnark::pb_linear_combination_array<FieldT> &A,//y
+                         const libsnark::pb_variable<FieldT> &result,
                          const std::string &annotation_prefix="") :
-        gadget<FieldT>(pb, annotation_prefix), A(A), result(result)
+        libsnark::gadget<FieldT>(pb, annotation_prefix), A(A), result(result)
     {
         g=FieldT::one()*2;
         temp1.allocate(pb, A.size(), FMT(this->annotation_prefix, " temp1"));
@@ -756,12 +619,12 @@ public:
         for (size_t i = 0; i < A.size(); ++i)
         {
         this->pb.add_r1cs_constraint(
-            r1cs_constraint<FieldT>( A[i] * (g ^ i) , FieldT::one(), temp1[i]),FMT(this->annotation_prefix, " S_%zu", i));     
+            libsnark::r1cs_constraint<FieldT>( A[i] * (g ^ i) , FieldT::one(), temp1[i]),FMT(this->annotation_prefix, " S_%zu", i));     
         }
         for (size_t i = 0; i < temp2.size(); ++i)
         {
         this->pb.add_r1cs_constraint(
-            r1cs_constraint<FieldT>(i==0 ? temp1[0]: temp2[i-1]+temp1[i]
+            libsnark::r1cs_constraint<FieldT>(i==0 ? temp1[0]: temp2[i-1]+temp1[i]
                                 , FieldT::one(), i==temp2.size()-1 ? result : temp2[i]),
             FMT(this->annotation_prefix, " S_%zu", i));
         }
@@ -784,19 +647,19 @@ public:
 };
 
 template<typename FieldT>
-class elgamal_gadget : public gadget<FieldT>{
+class elgamal_gadget : public libsnark::gadget<FieldT>{
     //FieldT g;
     //FieldT pk;
-    pb_variable<FieldT> g;
-    pb_variable<FieldT> pk;
-    pb_variable<FieldT> result1_1;
-    pb_variable<FieldT> result1_2;
+    libsnark::pb_variable<FieldT> g;
+    libsnark::pb_variable<FieldT> pk;
+    libsnark::pb_variable<FieldT> result1_1;
+    libsnark::pb_variable<FieldT> result1_2;
   
-    pb_variable<FieldT> result2_1;
-    pb_variable<FieldT> result2_2;
+    libsnark::pb_variable<FieldT> result2_1;
+    libsnark::pb_variable<FieldT> result2_2;
 
-    pb_variable<FieldT> result3_1;
-    pb_variable<FieldT> result3_2;
+    libsnark::pb_variable<FieldT> result3_1;
+    libsnark::pb_variable<FieldT> result3_2;
 
     std::shared_ptr<exp_gadget<FieldT>> exp1_1;
     std::shared_ptr<exp_gadget<FieldT>> exp1_2;
@@ -811,47 +674,47 @@ class elgamal_gadget : public gadget<FieldT>{
     std::shared_ptr<binary_gadget<FieldT>> binary2;
     std::shared_ptr<binary_gadget<FieldT>> binary3;
 
-    pb_variable_array<FieldT> random_y1;
-    pb_variable_array<FieldT> random_y2;
-    pb_variable_array<FieldT> random_y3;
+    libsnark::pb_variable_array<FieldT> random_y1;
+    libsnark::pb_variable_array<FieldT> random_y2;
+    libsnark::pb_variable_array<FieldT> random_y3;
 
-    pb_variable_array<FieldT> m;  
-    pb_variable_array<FieldT> c1;  
-    pb_variable_array<FieldT> c2;
+    libsnark::pb_variable_array<FieldT> m;  
+    libsnark::pb_variable_array<FieldT> c1;  
+    libsnark::pb_variable_array<FieldT> c2;
 
-    pb_variable_array<FieldT> apk1_array;
-    pb_variable_array<FieldT> apk2_array;
-    pb_variable_array<FieldT> v1_array;
-    pb_variable_array<FieldT> v2_array;
-    pb_variable_array<FieldT> v3_array;
+    libsnark::pb_variable_array<FieldT> apk1_array;
+    libsnark::pb_variable_array<FieldT> apk2_array;
+    libsnark::pb_variable_array<FieldT> v1_array;
+    libsnark::pb_variable_array<FieldT> v2_array;
+    libsnark::pb_variable_array<FieldT> v3_array;
 
-    pb_variable_array<FieldT> m1_array;
-    pb_variable_array<FieldT> m2_array;
-    pb_variable_array<FieldT> m3_array;
+    libsnark::pb_variable_array<FieldT> m1_array;
+    libsnark::pb_variable_array<FieldT> m2_array;
+    libsnark::pb_variable_array<FieldT> m3_array;
 
-    pb_variable<FieldT> m1_binary_result;
-    pb_variable<FieldT> m2_binary_result;
-    pb_variable<FieldT> m3_binary_result;
+    libsnark::pb_variable<FieldT> m1_binary_result;
+    libsnark::pb_variable<FieldT> m2_binary_result;
+    libsnark::pb_variable<FieldT> m3_binary_result;
 
 public:
-    elgamal_gadget(protoboard<FieldT> &pb,
+    elgamal_gadget(libsnark::protoboard<FieldT> &pb,
                         //FieldT &sg,  //生成元
                         //FieldT &gpk,
-                        pb_variable<FieldT> &sg,
-                        pb_variable<FieldT> &gpk,
-                        pb_variable_array<FieldT> &ran_y1,//第一个明文加密随机数
-                        pb_variable_array<FieldT> &ran_y2,//第二个明文加密随机数
-                        pb_variable_array<FieldT> &ran_y3,//第三个明文加密随机数
-                        pb_variable_array<FieldT> &m_arr,   //明文列表
-                        pb_variable_array<FieldT> &c1_arr,  //密文1列表
-                        pb_variable_array<FieldT> &c2_arr,  //密文2列表
-                        pb_variable_array<FieldT> &apk1_arr,
-                        pb_variable_array<FieldT> &apk2_arr,
-                        pb_variable_array<FieldT> &v1_arr,
-                        pb_variable_array<FieldT> &v2_arr,
-                        pb_variable_array<FieldT> &v3_arr
+                        libsnark::pb_variable<FieldT> &sg,
+                        libsnark::pb_variable<FieldT> &gpk,
+                        libsnark::pb_variable_array<FieldT> &ran_y1,//第一个明文加密随机数
+                        libsnark::pb_variable_array<FieldT> &ran_y2,//第二个明文加密随机数
+                        libsnark::pb_variable_array<FieldT> &ran_y3,//第三个明文加密随机数
+                        libsnark::pb_variable_array<FieldT> &m_arr,   //明文列表
+                        libsnark::pb_variable_array<FieldT> &c1_arr,  //密文1列表
+                        libsnark::pb_variable_array<FieldT> &c2_arr,  //密文2列表
+                        libsnark::pb_variable_array<FieldT> &apk1_arr,
+                        libsnark::pb_variable_array<FieldT> &apk2_arr,
+                        libsnark::pb_variable_array<FieldT> &v1_arr,
+                        libsnark::pb_variable_array<FieldT> &v2_arr,
+                        libsnark::pb_variable_array<FieldT> &v3_arr
         )
-        :gadget<FieldT>(pb){
+        :libsnark::gadget<FieldT>(pb){
         this->g=sg;
         this->pk=gpk;
 
@@ -904,9 +767,9 @@ public:
 
         //约束：random_y[i]是布尔值
         for(int i=0; i<253;i++){
-            generate_boolean_r1cs_constraint(this->pb,pb_linear_combination<FieldT>(random_y1[i]));
-            generate_boolean_r1cs_constraint(this->pb,pb_linear_combination<FieldT>(random_y2[i]));
-            generate_boolean_r1cs_constraint(this->pb,pb_linear_combination<FieldT>(random_y3[i]));
+            generate_boolean_r1cs_constraint(this->pb,libsnark::pb_linear_combination<FieldT>(random_y1[i]));
+            generate_boolean_r1cs_constraint(this->pb,libsnark::pb_linear_combination<FieldT>(random_y2[i]));
+            generate_boolean_r1cs_constraint(this->pb,libsnark::pb_linear_combination<FieldT>(random_y3[i]));
         }
         
         //apk1，前31字节
@@ -914,7 +777,7 @@ public:
             int j=((i/8)+1)*8-1;
             int off=i%8;
 
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m1_array[i], FieldT::one(), apk1_array[j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m1_array[i], FieldT::one(), apk1_array[j-off]),FMT(" S_%zu"));
             //m1_array[i]=apk1_array[j-off];
         }
     
@@ -923,7 +786,7 @@ public:
             int j=((i/8)+1)*8-1;
             int off=i%8;
 
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m2_array[i], FieldT::one(), apk1_array[31*8+j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m2_array[i], FieldT::one(), apk1_array[31*8+j-off]),FMT(" S_%zu"));
             //m2_array[i]=apk1_array[31*8+j-off];
         }
         
@@ -932,7 +795,7 @@ public:
             int j=((i/8)+1)*8-1;
             int off=i%8;
 
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m2_array[1*8+i], FieldT::one(), apk2_array[j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m2_array[1*8+i], FieldT::one(), apk2_array[j-off]),FMT(" S_%zu"));
             //m2_array[1*8+i]=apk2_array[j-off];
         }
     
@@ -941,7 +804,7 @@ public:
             int j=((i/8)+1)*8-1;
             int off=i%8;
 
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m3_array[i], FieldT::one(), apk2_array[30*8+j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m3_array[i], FieldT::one(), apk2_array[30*8+j-off]),FMT(" S_%zu"));
             //m3_array[i]=apk2_array[30*8+j-off];
         }
         
@@ -950,7 +813,7 @@ public:
             int j=((i/8)+1)*8-1;
             int off=i%8;
 
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m3_array[2*8+i], FieldT::one(), v1_array[j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m3_array[2*8+i], FieldT::one(), v1_array[j-off]),FMT(" S_%zu"));
             //m3_array[2*8+i]=v1_array[j-off];
         }
     
@@ -959,7 +822,7 @@ public:
             int j=((i/8)+1)*8-1;
             int off=i%8;
 
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m3_array[2*8+8*8+i], FieldT::one(), v2_array[j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m3_array[2*8+8*8+i], FieldT::one(), v2_array[j-off]),FMT(" S_%zu"));
             //m3_array[2*8+8*8+i]=v2_array[j-off];
         }
     
@@ -967,7 +830,7 @@ public:
         for(int i=0;i<8*8;i++){
             int j=((i/8)+1)*8-1;
             int off=i%8;
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m3_array[2*8+8*8+8*8+i], FieldT::one(), v3_array[j-off]),FMT(" S_%zu"));
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m3_array[2*8+8*8+8*8+i], FieldT::one(), v3_array[j-off]),FMT(" S_%zu"));
             //m3_array[2*8+8*8+8*8+i]=v3_array[j-off]; 
         }
 
@@ -975,33 +838,33 @@ public:
         //密文等于明文加密
         //约束：g ^ y == c1
         exp1_1->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(result1_1, FieldT::one(), c1[0]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(result1_1, FieldT::one(), c1[0]),FMT(" S_%zu"));
 
         exp2_1->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(result2_1, FieldT::one(), c1[1]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(result2_1, FieldT::one(), c1[1]),FMT(" S_%zu"));
 
         exp3_1->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(result3_1, FieldT::one(), c1[2]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(result3_1, FieldT::one(), c1[2]),FMT(" S_%zu"));
         
         //约束：m * (Gpk ^ y) == c2
         exp1_2->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(result1_2, m[0], c2[0]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(result1_2, m[0], c2[0]),FMT(" S_%zu"));
 
         exp2_2->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(result2_2, m[1], c2[1]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(result2_2, m[1], c2[1]),FMT(" S_%zu"));
 
         exp3_2->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(result3_2, m[2], c2[2]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(result3_2, m[2], c2[2]),FMT(" S_%zu"));
 
         //明文等于apk和v的组合
         binary1->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m1_binary_result, FieldT::one(), m[0]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m1_binary_result, FieldT::one(), m[0]),FMT(" S_%zu"));
 
         binary2->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m2_binary_result, FieldT::one(), m[1]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m2_binary_result, FieldT::one(), m[1]),FMT(" S_%zu"));
 
         binary3->generate_r1cs_constraints();
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(m3_binary_result, FieldT::one(), m[2]),FMT(" S_%zu"));
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(m3_binary_result, FieldT::one(), m[2]),FMT(" S_%zu"));
 
     }
 
@@ -1082,8 +945,9 @@ struct node     //定义二叉树节点数据结构
 	node *right;
 	uint256 data;
 };
+
 class MerkleTreePath{
-    public:
+public:
     std::vector<uint256> nodeHashList;
     std::vector<uint256> parentList;
     std::vector<int> pathisrightList;
@@ -1091,269 +955,245 @@ class MerkleTreePath{
     uint256 leaf;
 };
 
-class MerkleTree{
+uint256 combine(const uint256& a, const uint256& b);
 
+class MerkleTree{
 private:
     int _DEEPTH;
-	vector<node> Tree;  //存储树的向量
+	std::vector<node> Tree;  //存储树的向量
     uint256 _d_leaf;
     int index;
-	void updateTree();       //更新树  
+
+    //更新树
+	void updateTree() {
+        int nodeNum;         //计算已更新节点所在的那层以及以下各层的节点数和
+        for (int j = _DEEPTH; j >1; j--)
+        {
+            nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+            (*Tree.at(index).parent).data = msk::combine((*(*Tree.at(index).parent).left).data , (*(*Tree.at(index).parent).right).data);  //更新父节点的值
+            index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+        }
+        std::cout << "update done" << std::endl;
+    }        
 	void findLeafIndex(int leaf);      //给定一个叶节点的值，返回其在树中的索引
-	void getNodeHashList(uint256 leaf);
-	void getParentList(uint256 leaf);
-	void getPathisrightList(uint256 leaf);
+	void getNodeHashList(uint256 leaf) {
+        for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+        {
+            if (Tree.at(index).data == leaf)
+                break;
+            if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+            {
+                std::cout << "ERROR" << std::endl;
+                return;
+            }
+        }
+
+        int nodeNum;
+        for (int j = _DEEPTH; j > 1; j--)
+        {
+            //判断index对应的叶节点是左节点还是右节点
+            if (index % 2 == 0)   //左节点
+            {
+                nodeHashList.push_back(Tree.at(index).data);
+                nodeHashList.push_back(Tree.at(index+1).data);
+            }
+            else    //右节点
+            {
+                nodeHashList.push_back(Tree.at(index-1).data);
+                nodeHashList.push_back(Tree.at(index).data);
+            }
+            nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+            index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+        }
+    }
+	void getParentList(uint256 leaf) {
+        for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+        {
+            if (Tree.at(index).data == leaf)
+                break;
+            if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+            {
+                std::cout << "ERROR" << std::endl;
+                return;
+            }
+        }
+        int nodeNum;
+        for (int j = _DEEPTH; j > 1; j--)
+        {
+            nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+            index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+            parentList.push_back(Tree.at(index).data);
+        }
+    }
+	void getPathisrightList(uint256 leaf) {
+        for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+        {
+            if (Tree.at(index).data == leaf)
+                break;
+            if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+            {
+                std::cout << "ERROR" << std::endl;
+                return;
+            }
+        }
+        int nodeNum;
+        for (int j = _DEEPTH; j > 1; j--)
+        {
+            if (index % 2 == 0)   //左节点
+            {
+                pathisrightList.push_back(0);
+            }
+            else    //右节点
+            {
+                pathisrightList.push_back(1);
+            }
+            nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
+            index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
+        }
+    }
 
 public:
     void inite(int deep)
     {_DEEPTH=deep+1;
     _d_leaf=uint256S("1111111111111111111111111111111111111111111111111111111111111111");
     };
-	vector<uint256> nodeHashList;   //存储需要被哈希的节点值
-	vector<uint256> parentList;    //父节点列表
-	vector<int> pathisrightList;    //存储节点是左节点还是右节点
+	std::vector<uint256> nodeHashList;   //存储需要被哈希的节点值
+	std::vector<uint256> parentList;    //父节点列表
+	std::vector<int> pathisrightList;    //存储节点是左节点还是右节点
 
-	void creatTree();     //从叶节点开始由下到上创建并初始化二叉树
-	void addLeaf(uint256 newLeaf);        //查找叶节点中未被更新的节点，并将其值更新为naeleaf
-	void deleteLeafValue(uint256 deleteLeaf);  //将指定位置的叶子结点恢复默认值
+    //从叶节点开始由下到上创建并初始化二叉树
+	void creatTree() {
+        //初始化节点
+        for (int i = 0; i < ((int)pow(2, _DEEPTH) - 1); i++)  
+        {
+            node initNode;
+            initNode = { NULL, NULL, NULL, _d_leaf };     //节点的默认值
+            Tree.push_back(initNode);
+        }
+
+        //创建树
+        int nodeNum = 0;   //存储创建树的过程中已被创建过关系的节点数量
+        for (int j = _DEEPTH; j >0; j--)
+        {
+            int parentIndex, childIndex;
+            for (int i = nodeNum; i < nodeNum + (int)pow(2, j - 1); i++)
+            {
+                if (i < (int)pow(2, _DEEPTH - 1))
+                {
+                    parentIndex = nodeNum + (int)pow(2, j - 1) + (i - nodeNum) / 2;   //父节点的索引
+                    Tree.at(i).parent = &Tree[parentIndex];
+                    //cout << Tree.at(i).data << std::endl;
+                }
+                else if (i == pow(2, _DEEPTH) - 2)
+                {
+                    childIndex = (i - (int)pow(2, _DEEPTH - 1)) * 2;
+                    Tree.at(i).left = &Tree.at(childIndex);
+                    Tree.at(i).right = &Tree.at(childIndex + 1);
+                    Tree.at(i).data = msk::combine(Tree.at(childIndex).data , Tree.at(childIndex + 1).data); //父节点的data值为左右孩子节点的data相加
+                    //cout << Tree.at(i).data << std::endl;
+                }
+                else
+                {
+                    parentIndex = nodeNum + (int)pow(2, j - 1) + (i - nodeNum) / 2;
+                    Tree.at(i).parent = &Tree.at(parentIndex);
+                    childIndex = (i - (int)pow(2, _DEEPTH - 1)) * 2;         //孩子节点的索引
+                    Tree.at(i).left = &Tree.at(childIndex);  
+                    Tree.at(i).right = &Tree.at(childIndex+1);
+                    Tree.at(i).data = msk::combine(Tree.at(childIndex).data , Tree.at(childIndex + 1).data);  
+                }
+            }
+            nodeNum = nodeNum + pow(2, j - 1);
+        }
+    }
+
+    //查找叶节点中未被更新的节点，并将其值更新为naeleaf
+	void addLeaf(uint256 newLeaf) {
+        for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+        {
+            if (Tree.at(index).data == _d_leaf)
+                break;
+            if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到，则置index为NULL
+            {
+                std::cout << "ERROR" << std::endl;
+                return;
+            }
+        }
+        Tree.at(index).data = newLeaf;   //更新节点的值
+        std::cout << index<< std::endl;
+        updateTree();      //更新树
+        std::cout << "add leaf done" << std::endl;
+    }
+
+    //将指定位置的叶子结点恢复默认值
+	void deleteLeafValue(uint256 deleteLeaf) {
+        for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
+        {
+            if (Tree.at(index).data == deleteLeaf)
+                break;
+            if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+            {
+                std::cout << "ERROR" << std::endl;
+                return;
+            }
+        }
+        Tree.at(index).data = _d_leaf;    //更新节点的值
+        updateTree();      //更新树
+    }
 	
-	uint256  getRoot();
-	MerkleTreePath getPath(uint256 leaf);
+	uint256  getRoot() {
+        return Tree.back().data;
+    }
+	MerkleTreePath getPath(uint256 leaf) {
+        MerkleTreePath path;
+        for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  
+        {
+            if (Tree.at(index).data == leaf)
+                break;
+            if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
+            {
+                std::cout << "ERROR" << std::endl;
+                return path;
+            }
+        }
+        getNodeHashList(leaf);
+        getParentList(leaf);
+        getPathisrightList(leaf);
+        
+        path.nodeHashList=nodeHashList;
+        path.parentList=parentList;
+        path.pathisrightList=pathisrightList;
+        path.root=Tree.back().data;
+        path.leaf=leaf;
+
+        return path;
+    }
 	
-	void printTree();
+	void printTree() {
+        for (int i = 0; i < Tree.size(); i++)
+        {
+            std::cout << Tree[i].data.ToString() << std::endl;
+        }
+    }
 };
-
-void MerkleTree::creatTree()   //从叶节点开始由下到上创建并初始化二叉树
-{
-    
-	//初始化节点
-	for (int i = 0; i < ((int)pow(2, _DEEPTH) - 1); i++)  
-	{
-		node initNode;
-		initNode = { NULL, NULL, NULL, _d_leaf };     //节点的默认值
-		Tree.push_back(initNode);
-	}
-
-	//创建树
-	int nodeNum = 0;   //存储创建树的过程中已被创建过关系的节点数量
-	for (int j = _DEEPTH; j >0; j--)
-	{
-		int parentIndex, childIndex;
-		for (int i = nodeNum; i < nodeNum + (int)pow(2, j - 1); i++)
-		{
-			if (i < (int)pow(2, _DEEPTH - 1))
-			{
-				parentIndex = nodeNum + (int)pow(2, j - 1) + (i - nodeNum) / 2;   //父节点的索引
-				Tree.at(i).parent = &Tree[parentIndex];
-				//cout << Tree.at(i).data << endl;
-			}
-			else if (i == pow(2, _DEEPTH) - 2)
-			{
-				childIndex = (i - (int)pow(2, _DEEPTH - 1)) * 2;
-				Tree.at(i).left = &Tree.at(childIndex);
-				Tree.at(i).right = &Tree.at(childIndex + 1);
-				Tree.at(i).data = combine(Tree.at(childIndex).data , Tree.at(childIndex + 1).data); //父节点的data值为左右孩子节点的data相加
-				//cout << Tree.at(i).data << endl;
-			}
-			else
-			{
-				parentIndex = nodeNum + (int)pow(2, j - 1) + (i - nodeNum) / 2;
-				Tree.at(i).parent = &Tree.at(parentIndex);
-				childIndex = (i - (int)pow(2, _DEEPTH - 1)) * 2;         //孩子节点的索引
-				Tree.at(i).left = &Tree.at(childIndex);  
-				Tree.at(i).right = &Tree.at(childIndex+1);
-				Tree.at(i).data = combine(Tree.at(childIndex).data , Tree.at(childIndex + 1).data);  
-			}
-		}
-		nodeNum = nodeNum + pow(2, j - 1);
-	}
-}
-
-void MerkleTree::updateTree()   //根据被更新叶节点的索引来更新整个二叉树
-{
-	int nodeNum;         //计算已更新节点所在的那层以及以下各层的节点数和
-	for (int j = _DEEPTH; j >1; j--)
-	{
-		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
-		(*Tree.at(index).parent).data = combine((*(*Tree.at(index).parent).left).data , (*(*Tree.at(index).parent).right).data);  //更新父节点的值
-		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
-	}
-	cout << "update done" << endl;
-}
-
-
-void MerkleTree::addLeaf(uint256 newLeaf)
-{
-	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
-	{
-		if (Tree.at(index).data == _d_leaf)
-			break;
-		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到，则置index为NULL
-		{
-			cout << "ERROR" << endl;
-			return;
-		}
-	}
-	Tree.at(index).data = newLeaf;   //更新节点的值
-	cout << index<< endl;
-	updateTree();      //更新树
-	cout << "add leaf done" << endl;
-}
-
-void MerkleTree::deleteLeafValue(uint256 deleteLeaf)
-{
-	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
-	{
-		if (Tree.at(index).data == deleteLeaf)
-			break;
-		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
-		{
-			cout << "ERROR" << endl;
-			return;
-		}
-	}
-	Tree.at(index).data = _d_leaf;    //更新节点的值
-	updateTree();      //更新树
-}
-
-uint256 MerkleTree::getRoot()
-{
-	return Tree.back().data;
-}
-
-void MerkleTree::getNodeHashList(uint256 leaf)
-{
-	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
-	{
-		if (Tree.at(index).data == leaf)
-			break;
-		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
-		{
-			cout << "ERROR" << endl;
-			return;
-		}
-	}
-
-	int nodeNum;
-	for (int j = _DEEPTH; j > 1; j--)
-	{
-		//判断index对应的叶节点是左节点还是右节点
-		if (index % 2 == 0)   //左节点
-		{
-			nodeHashList.push_back(Tree.at(index).data);
-			nodeHashList.push_back(Tree.at(index+1).data);
-		}
-		else    //右节点
-		{
-			nodeHashList.push_back(Tree.at(index-1).data);
-			nodeHashList.push_back(Tree.at(index).data);
-		}
-		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
-		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
-	}
-}
-
-void MerkleTree::getParentList(uint256 leaf)
-{
-	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
-	{
-		if (Tree.at(index).data == leaf)
-			break;
-		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
-		{
-			cout << "ERROR" << endl;
-			return;
-		}
-	}
-	
-	int nodeNum;
-	for (int j = _DEEPTH; j > 1; j--)
-	{
-		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
-		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
-		parentList.push_back(Tree.at(index).data);
-	}
-}
-
-void MerkleTree::getPathisrightList(uint256 leaf)
-{
-	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  //寻找未被更新过的叶节点
-	{
-		if (Tree.at(index).data == leaf)
-			break;
-		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
-		{
-			cout << "ERROR" << endl;
-			return;
-		}
-	}
-	int nodeNum;
-	for (int j = _DEEPTH; j > 1; j--)
-	{
-		if (index % 2 == 0)   //左节点
-		{
-			pathisrightList.push_back(0);
-		}
-		else    //右节点
-		{
-			pathisrightList.push_back(1);
-		}
-		nodeNum = (pow(2, j)*(1 - pow(2, _DEEPTH - j))) / (1 - 2);
-		index = nodeNum + (int)pow(2, j - 1) + (index - nodeNum) / 2;  //计算父节点索引
-	}
-}
-MerkleTreePath MerkleTree::getPath(uint256 leaf)
-{
-    MerkleTreePath path;
-	for (index = 0; index < pow(2.0, _DEEPTH - 1); index++)  
-	{
-		if (Tree.at(index).data == leaf)
-			break;
-		if (index == pow(2, _DEEPTH - 1) - 1)   //若未找到
-		{
-			cout << "ERROR" << endl;
-			return path;
-		}
-	}
-	getNodeHashList(leaf);
-	getParentList(leaf);
-    getPathisrightList(leaf);
-    
-    path.nodeHashList=nodeHashList;
-    path.parentList=parentList;
-    path.pathisrightList=pathisrightList;
-    path.root=Tree.back().data;
-    path.leaf=leaf;
-
-    return path;
-}
-
-void MerkleTree::printTree()
-{
-	for (int i = 0; i < Tree.size(); i++)
-	{
-		cout << Tree[i].data.ToString() << endl;
-	}
-}
 
 
 template<typename FieldT>
-class digest_selector_gadget : public gadget<FieldT> {
+class digest_selector_gadget : public libsnark::gadget<FieldT> {
 public:
     size_t digest_size;
-    digest_variable<FieldT> input;
-    pb_linear_combination<FieldT> is_right;
-    digest_variable<FieldT> left;
-    digest_variable<FieldT> right;
+    libsnark::digest_variable<FieldT> input;
+    libsnark::pb_linear_combination<FieldT> is_right;
+    libsnark::digest_variable<FieldT> left;
+    libsnark::digest_variable<FieldT> right;
 
-    digest_selector_gadget(protoboard<FieldT> &pb,
+    digest_selector_gadget(libsnark::protoboard<FieldT> &pb,
                            const size_t digest_size,
-                           const digest_variable<FieldT> &input,
-                           const pb_linear_combination<FieldT> &is_right,
-                           const digest_variable<FieldT> &left,
-                           const digest_variable<FieldT> &right,
+                           const libsnark::digest_variable<FieldT> &input,
+                           const libsnark::pb_linear_combination<FieldT> &is_right,
+                           const libsnark::digest_variable<FieldT> &left,
+                           const libsnark::digest_variable<FieldT> &right,
                            const std::string &annotation_prefix):
-    gadget<FieldT>(pb, annotation_prefix), digest_size(digest_size)
+    libsnark::gadget<FieldT>(pb, annotation_prefix), digest_size(digest_size)
         , input(input), is_right(is_right), left(left), right(right)
     {
     }
@@ -1366,7 +1206,7 @@ public:
             input = is_right * right + (1-is_right) * left
             input - left = is_right(right - left)
             */
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(is_right, right.bits[i] - left.bits[i], input.bits[i] - left.bits[i]),
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(is_right, right.bits[i] - left.bits[i], input.bits[i] - left.bits[i]),
                                         FMT(this->annotation_prefix, " propagate_%zu", i));
         }
     }
@@ -1393,265 +1233,57 @@ public:
     }
 };
 
-MerkleTreePath getMerkleTreePath_apk_s(uint256 ask_s, uint256 apk_r){
+MerkleTreePath getMerkleTreePath_apk_s(uint256 ask_s, uint256 apk_r);
 
-    //叶子
-    MerkleTree apks;
-    MerkleTreePath mps;
-    apks.inite(4);
+MerkleTreePath getMerkleTreePath_apk_r(uint256 apk_r);
 
-    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
-    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
+MerkleTreePath getMerkleTreePath(uint256 ask_s,uint64_t v_1,uint256 old_r);
 
-    uint256 apk_s=prf(ask_s);
-   
+MerkleTreePath getMerkleTreePath_lb(uint256 ask_s,uint64_t v1,uint64_t v2,uint256 old_r);
 
-    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
-    uint256 new_r=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
-
-    uint256 u3=apk_r;
-    uint256 u4=apk_s;
-
-    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
-    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
-    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
-    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
-
-    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
-    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
-    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
-    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
-
-    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-
-    apks.creatTree();
-    apks.addLeaf(u1);
-    apks.addLeaf(u2);
-    apks.addLeaf(u3);
-    apks.addLeaf(u4);
-    apks.addLeaf(u5);
-    apks.addLeaf(u6);
-    apks.addLeaf(u7);
-    apks.addLeaf(u8);
-    apks.addLeaf(u9);
-    apks.addLeaf(u10);
-    apks.addLeaf(u11);
-    apks.addLeaf(u12);
-    apks.addLeaf(u13);
-    apks.addLeaf(u14);
-    apks.addLeaf(u15);
-    apks.addLeaf(u16);
-    mps=apks.getPath(u4);
-    return mps;
-}
-
-MerkleTreePath getMerkleTreePath_apk_r(uint256 apk_r){
-
-    //叶子
-    MerkleTree apkr;
-    MerkleTreePath mpr;
-    apkr.inite(4);
-
-     //叶子
-    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
-    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
-
-    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
-    uint256 apk_s=prf(ask_s);
-   
-
-    uint64_t v_1=5;
-    uint64_t v_2=0;
-    uint64_t v_3=0;
-
-    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
-    uint256 new_r=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
-
-    uint256 u3=apk_r;
-    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
-
-    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
-    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
-    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
-    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
-
-    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
-    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
-    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
-    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
-
-    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-
-    apkr.creatTree();
-    apkr.addLeaf(u1);
-    apkr.addLeaf(u2);
-    apkr.addLeaf(u3);
-    apkr.addLeaf(u4);
-    apkr.addLeaf(u5);
-    apkr.addLeaf(u6);
-    apkr.addLeaf(u7);
-    apkr.addLeaf(u8);
-    apkr.addLeaf(u9);
-    apkr.addLeaf(u10);
-    apkr.addLeaf(u11);
-    apkr.addLeaf(u12);
-    apkr.addLeaf(u13);
-    apkr.addLeaf(u14);
-    apkr.addLeaf(u15);
-    apkr.addLeaf(u16);
-    mpr=apkr.getPath(u3);
-    return mpr;
-}
-MerkleTreePath getMerkleTreePath(uint256 ask_s,uint64_t v_1,uint256 old_r)
-{  //叶子
-    MerkleTree cmt;
-    MerkleTreePath mp;
-    cmt.inite(4);
-    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
-    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
-
-    uint256 apk_s=prf(ask_s);
-
-    uint256 u3=cm(apk_s,v_1,old_r);
-    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
-
-    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
-    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
-    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
-    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
-
-    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
-    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
-    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
-    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
-
-    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    
-   
-    cmt.creatTree();
-    cmt.addLeaf(u1);
-    cmt.addLeaf(u2);  
-    cmt.addLeaf(u3);
-    cmt.addLeaf(u4);   
-    cmt.addLeaf(u5);
-    cmt.addLeaf(u6);  
-    cmt.addLeaf(u7);
-    cmt.addLeaf(u8); 
-    cmt.addLeaf(u9);
-    cmt.addLeaf(u10);  
-    cmt.addLeaf(u11);
-    cmt.addLeaf(u12);   
-    cmt.addLeaf(u13);
-    cmt.addLeaf(u14);  
-    cmt.addLeaf(u15);
-    cmt.addLeaf(u16); 
-    mp=cmt.getPath(u3);
-    return mp;
-}
-MerkleTreePath getMerkleTreePath_lb(uint256 ask_s,uint64_t v1,uint64_t v2,uint256 old_r){
-
-    //叶子
-    MerkleTree cmt;
-    MerkleTreePath mp;
-    cmt.inite(4);
-    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
-    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
-
-    uint256 apk_s=prf(ask_s);
-   
-    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
-
-
-    uint256 u3=cm(apk_s,v1+v2,old_r);
-    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
-
-    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
-    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
-    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
-    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
-
-    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
-    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
-    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
-    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
-
-    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
-     
-    cmt.creatTree();
-    cmt.addLeaf(u1);
-    cmt.addLeaf(u2);  
-    cmt.addLeaf(u3);
-    cmt.addLeaf(u4);   
-    cmt.addLeaf(u5);
-    cmt.addLeaf(u6);  
-    cmt.addLeaf(u7);
-    cmt.addLeaf(u8); 
-    cmt.addLeaf(u9);
-    cmt.addLeaf(u10);  
-    cmt.addLeaf(u11);
-    cmt.addLeaf(u12);   
-    cmt.addLeaf(u13);
-    cmt.addLeaf(u14);  
-    cmt.addLeaf(u15);
-    cmt.addLeaf(u16); 
-    mp=cmt.getPath(u3);
-    return mp;
-}
 template<typename FieldT>
-class tree_gadget : public gadget<FieldT> {
+class tree_gadget : public libsnark::gadget<FieldT> {
 private:
     
-    std::vector<digest_variable<FieldT>> child;
-    std::vector<digest_variable<FieldT>> parent;
-    std::vector<digest_variable<FieldT>> input;
-    pb_variable_array<FieldT> is_right;
+    std::vector<libsnark::digest_variable<FieldT>> child;
+    std::vector<libsnark::digest_variable<FieldT>> parent;
+    std::vector<libsnark::digest_variable<FieldT>> input;
+    libsnark::pb_variable_array<FieldT> is_right;
 
-    std::shared_ptr<digest_variable<FieldT>> leaf;
-    std::shared_ptr<digest_variable<FieldT>> root;
+    std::shared_ptr<libsnark::digest_variable<FieldT>> leaf;
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root;
 
-    std::vector<sha256_two_to_one_hash_gadget<FieldT>> hasher;
+    std::vector<libsnark::sha256_two_to_one_hash_gadget<FieldT>> hasher;
     std::vector<digest_selector_gadget<FieldT>> selector;
 public:
-    tree_gadget(protoboard<FieldT>& pb, std::shared_ptr<digest_variable<FieldT>> root_dg, std::shared_ptr<digest_variable<FieldT>> leaf_dg,const std::string &annotation_prefix="") :
-    gadget<FieldT>(pb, annotation_prefix)
+    tree_gadget(libsnark::protoboard<FieldT>& pb, std::shared_ptr<libsnark::digest_variable<FieldT>> root_dg, std::shared_ptr<libsnark::digest_variable<FieldT>> leaf_dg,const std::string &annotation_prefix="") :
+    libsnark::gadget<FieldT>(pb, annotation_prefix)
     {
         is_right.allocate(pb,TREE_DEEPTH,"is_right");
        
         for(size_t i=0;i<2*TREE_DEEPTH;i++){
-            child.push_back(digest_variable<FieldT>(this->pb, SHA256_digest_size, "child"));
+            child.push_back(libsnark::digest_variable<FieldT>(this->pb, libsnark::SHA256_digest_size, "child"));
         }
        
         for(size_t i=0;i<TREE_DEEPTH;i++){
            
-            parent.push_back(digest_variable<FieldT>(this->pb, SHA256_digest_size, "parent"));
+            parent.push_back(libsnark::digest_variable<FieldT>(this->pb, libsnark::SHA256_digest_size, "parent"));
 
-            input.push_back(digest_variable<FieldT>(this->pb, SHA256_digest_size, "input"));
-            hasher.push_back(sha256_two_to_one_hash_gadget<FieldT>(this->pb, child[i*2], child[i*2+1], parent[i], "hasher"));
-            selector.push_back(digest_selector_gadget<FieldT>(this->pb,SHA256_digest_size,input[i],pb_linear_combination<FieldT>(is_right[i]),child[i*2],child[i*2+1],"selector"));
+            input.push_back(libsnark::digest_variable<FieldT>(this->pb, libsnark::SHA256_digest_size, "input"));
+            hasher.push_back(libsnark::sha256_two_to_one_hash_gadget<FieldT>(this->pb, child[i*2], child[i*2+1], parent[i], "hasher"));
+            selector.push_back(digest_selector_gadget<FieldT>(this->pb,libsnark::SHA256_digest_size,input[i],libsnark::pb_linear_combination<FieldT>(is_right[i]),child[i*2],child[i*2+1],"selector"));
         }
 
         root=root_dg;
         leaf=leaf_dg;
 
-        //leaf.reset(new digest_variable<FieldT>(this->pb, SHA256_digest_size, "root") );
-        //root.reset(new digest_variable<FieldT>(this->pb, SHA256_digest_size, "root") ); 
+        //leaf.reset(new libsnark::digest_variable<FieldT>(this->pb, libsnark::SHA256_digest_size, "root") );
+        //root.reset(new libsnark::digest_variable<FieldT>(this->pb, libsnark::SHA256_digest_size, "root") ); 
     }
 
-    void add_digest_equal(digest_variable<FieldT> &d1,digest_variable<FieldT> &d2){
+    void add_digest_equal(libsnark::digest_variable<FieldT> &d1,libsnark::digest_variable<FieldT> &d2){
         for(size_t i=0;i<256;i++){
-            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(d1.bits[i]
+            this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(d1.bits[i]
             , FieldT::one(), d2.bits[i]),FMT(" S_%zu"));
         }
     }
@@ -1659,14 +1291,14 @@ public:
     void generate_r1cs_constraints(){
 
         for(size_t i=0;i<TREE_DEEPTH;i++){
-           generate_boolean_r1cs_constraint(this->pb,pb_linear_combination<FieldT>(is_right[i]));
+           generate_boolean_r1cs_constraint(this->pb,libsnark::pb_linear_combination<FieldT>(is_right[i]));
         }
-        cout<<"11"<<endl;
+        std::cout<<"11"<<std::endl;
         for(size_t i=0;i<TREE_DEEPTH;i++){
            hasher[i].generate_r1cs_constraints();
            selector[i].generate_r1cs_constraints();
         } 
-        cout<<"22"<<endl;
+        std::cout<<"22"<<std::endl;
         for(size_t i=0;i<TREE_DEEPTH;i++){
           if(i==0){
                 add_digest_equal(input[0],*leaf);
@@ -1680,7 +1312,7 @@ public:
           }
    
         }
-       cout<<"33"<<endl;
+       std::cout<<"33"<<std::endl;
 
     }
 
@@ -1696,7 +1328,7 @@ public:
         //root->generate_r1cs_witness(uint256_to_bool_vector(root_ui256));
 
         for(size_t i=0;i<TREE_DEEPTH;i++){
-            bv_l =  uint256_to_bool_vector(child_ui256_list[i*2]);
+            bv_l =  msk::uint256_to_bool_vector(child_ui256_list[i*2]);
             bv_r =  uint256_to_bool_vector(child_ui256_list[i*2+1]);
             bv_p =  uint256_to_bool_vector(parent_ui256_list[i]);
             
@@ -1719,66 +1351,68 @@ public:
         } 
     }
 };
+
+
 template<typename FieldT>
-class joinsplit_gadget_z : gadget<FieldT> {
+class joinsplit_gadget_z : libsnark::gadget<FieldT> {
 private:
     //FieldT g;
     //FieldT Gpk;
-    pb_variable<FieldT> g;
-    pb_variable<FieldT> Gpk;
+    libsnark::pb_variable<FieldT> g;
+    libsnark::pb_variable<FieldT> Gpk;
     // sk pk
-    std::shared_ptr<digest_variable<FieldT>> a_sk_s;//私钥  
-    std::shared_ptr<digest_variable<FieldT>> a_pk_s;//公钥
+    std::shared_ptr<libsnark::digest_variable<FieldT>> a_sk_s;//私钥  
+    std::shared_ptr<libsnark::digest_variable<FieldT>> a_pk_s;//公钥
     std::shared_ptr<prf_gadget<FieldT>> prf_gad;
     
     //sn
-    std::shared_ptr<digest_variable<FieldT>> sn_old;//序列号  
+    std::shared_ptr<libsnark::digest_variable<FieldT>> sn_old;//序列号  
     std::shared_ptr<sn_gadget<FieldT>> sn_gad;
 
     // commitment
-    pb_variable_array<FieldT> v_old;               //金额
-    std::shared_ptr<digest_variable<FieldT>> r_old;    //随机数
-    std::shared_ptr<digest_variable<FieldT>> commitment_old;//老承诺
+    libsnark::pb_variable_array<FieldT> v_old;               //金额
+    std::shared_ptr<libsnark::digest_variable<FieldT>> r_old;    //随机数
+    std::shared_ptr<libsnark::digest_variable<FieldT>> commitment_old;//老承诺
     std::shared_ptr<comm_gadget<FieldT>> comm_gad_old;
 
     // merkle tree
     std::shared_ptr<tree_gadget<FieldT>> tree_gad_cm;//承诺树
-    std::shared_ptr<digest_variable<FieldT>> root_cm;//根
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root_cm;//根
 
     std::shared_ptr<tree_gadget<FieldT>> tree_gad_apk_s;//付款方
-    std::shared_ptr<digest_variable<FieldT>> root_apk_s;//根
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root_apk_s;//根
 
     std::shared_ptr<tree_gadget<FieldT>> tree_gad_apk_r;//收款方
-    std::shared_ptr<digest_variable<FieldT>> root_apk_r;//根
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root_apk_r;//根
 
     // balance
-    pb_variable_array<FieldT> v_new;
+    libsnark::pb_variable_array<FieldT> v_new;
 
     // new commitment
-    std::shared_ptr<digest_variable<FieldT>> a_pk_r;//收款方公钥
-    std::shared_ptr<digest_variable<FieldT>> r_new; //新的随机数
-    std::shared_ptr<digest_variable<FieldT>> commitment_new;//新承诺
+    std::shared_ptr<libsnark::digest_variable<FieldT>> a_pk_r;//收款方公钥
+    std::shared_ptr<libsnark::digest_variable<FieldT>> r_new; //新的随机数
+    std::shared_ptr<libsnark::digest_variable<FieldT>> commitment_new;//新承诺
     std::shared_ptr<comm_gadget<FieldT>> comm_gad_new;
 
 
     //elgamal   
   
     //3次加密的随机数
-    pb_variable_array<FieldT> random_y1;
-    pb_variable_array<FieldT> random_y2;
-    pb_variable_array<FieldT> random_y3;
+    libsnark::pb_variable_array<FieldT> random_y1;
+    libsnark::pb_variable_array<FieldT> random_y2;
+    libsnark::pb_variable_array<FieldT> random_y3;
 
-    pb_variable_array<FieldT> m;    //明文列表
-    pb_variable_array<FieldT> c1;   //密文1列表
-    pb_variable_array<FieldT> c2;   //密文2列表
+    libsnark::pb_variable_array<FieldT> m;    //明文列表
+    libsnark::pb_variable_array<FieldT> c1;   //密文1列表
+    libsnark::pb_variable_array<FieldT> c2;   //密文2列表
 
-    pb_variable_array<FieldT> apk1_array;//付款方公约
-    pb_variable_array<FieldT> apk2_array;//收款方公约
+    libsnark::pb_variable_array<FieldT> apk1_array;//付款方公约
+    libsnark::pb_variable_array<FieldT> apk2_array;//收款方公约
 
     //金额
-    pb_variable_array<FieldT> v1_array; 
-    pb_variable_array<FieldT> v2_array; 
-    pb_variable_array<FieldT> v3_array;
+    libsnark::pb_variable_array<FieldT> v1_array; 
+    libsnark::pb_variable_array<FieldT> v2_array; 
+    libsnark::pb_variable_array<FieldT> v3_array;
 
     
     std::shared_ptr<elgamal_gadget<FieldT>> elgamal_gad;
@@ -1786,17 +1420,17 @@ private:
     int dimension;
 
 public:
-    joinsplit_gadget_z(protoboard<FieldT> &pb,FieldT &sg,FieldT &gpk) : gadget<FieldT>(pb) {
+    joinsplit_gadget_z(libsnark::protoboard<FieldT> &pb,FieldT &sg,FieldT &gpk) : libsnark::gadget<FieldT>(pb) {
         //公共参数长度：sn256+老承诺哈希树根256+新承诺256+付款方256+收款方256+6个密文+生成元+监管公钥
         dimension=256+256+256+256+256+6+1+1;
 
         //分配顺序
-        sn_old.reset(new digest_variable<FieldT>(pb, 256, ""));
-        root_cm.reset(new digest_variable<FieldT>(pb, 256, ""));
-        root_apk_s.reset(new digest_variable<FieldT>(pb, 256, ""));
-        root_apk_r.reset(new digest_variable<FieldT>(pb, 256, ""));
+        sn_old.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        root_cm.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        root_apk_s.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        root_apk_r.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
 
-        commitment_new.reset(new digest_variable<FieldT>(pb, 256, ""));
+        commitment_new.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         
         c1.allocate(pb,3,"c1");
         c2.allocate(pb,3,"c2");
@@ -1808,20 +1442,20 @@ public:
         this->pb.val(this->Gpk)=gpk;
 
         //ask,apk,prf
-        a_sk_s.reset(new digest_variable<FieldT>(pb, 256, ""));
-        a_pk_s.reset(new digest_variable<FieldT>(pb, 256, ""));
+        a_sk_s.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        a_pk_s.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         prf_gad.reset(new prf_gadget<FieldT>(
             pb,
             a_sk_s->bits,
             a_pk_s
         ));
-        cout<<"ask,apk,prf"<<endl;
+        std::cout<<"ask,apk,prf"<<std::endl;
 
         //comment
         v_old.allocate(pb, 64);
         
-        r_old.reset(new digest_variable<FieldT>(pb, 256, ""));
-        commitment_old.reset(new digest_variable<FieldT>(pb, 256, ""));
+        r_old.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        commitment_old.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         comm_gad_old.reset(new comm_gadget<FieldT>(
             pb,
             a_pk_s->bits,
@@ -1830,10 +1464,10 @@ public:
             commitment_old
         ));
 
-        a_pk_r.reset(new digest_variable<FieldT>(pb, 256, ""));
+        a_pk_r.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         v_new.allocate(pb, 64);
-        r_new.reset(new digest_variable<FieldT>(pb, 256, ""));
-        //commitment_new.reset(new digest_variable<FieldT>(pb, 256, ""));
+        r_new.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        //commitment_new.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         comm_gad_new.reset(new comm_gadget<FieldT>(
             pb,
             a_pk_r->bits,
@@ -1841,7 +1475,7 @@ public:
             r_new->bits,
             commitment_new
         ));
-        cout<<"comment"<<endl;
+        std::cout<<"comment"<<std::endl;
 
         //sn
         sn_gad.reset(new sn_gadget<FieldT>(
@@ -1850,14 +1484,14 @@ public:
             r_old->bits,
             sn_old
         ));
-        cout<<"sn"<<endl;
+        std::cout<<"sn"<<std::endl;
 
         //merkle tree
         
         tree_gad_cm.reset(new tree_gadget<FieldT>(pb,root_cm,commitment_old,""));
         tree_gad_apk_s.reset(new tree_gadget<FieldT>(pb,root_apk_s,a_pk_s,""));
         tree_gad_apk_r.reset(new tree_gadget<FieldT>(pb,root_apk_r,a_pk_r,""));
-        cout<<"tree"<<endl;
+        std::cout<<"tree"<<std::endl;
 
         //elgamal
         
@@ -1887,7 +1521,7 @@ public:
                         v2_array,
                         v3_array
                     ));
-                cout<<"elg"<<endl;
+                std::cout<<"elg"<<std::endl;
     }
 
     void generate_r1cs_constraints() {
@@ -1903,7 +1537,7 @@ public:
         comm_gad_new->generate_r1cs_constraints();
         
         // value == new_value
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(
             1,
             packed_addition(v_old),
             packed_addition(v_new)
@@ -2011,28 +1645,31 @@ public:
         
     }
 };
+
+
 typedef struct transferOne{
      uint256 SNold;/*老随机数*/
      uint256 krnew;/*新承诺*/
-     r1cs_ppzksnark_proof<ppT> pi;/*整币证明*/
+     libsnark::r1cs_ppzksnark_proof<ppT> pi;/*整币证明*/
      //unsigned char *data;/*加密数据*/
      unsigned char data[32*6];/*加密数据*/
-     r1cs_ppzksnark_verification_key<ppT> vk;
+     libsnark::r1cs_ppzksnark_verification_key<ppT> vk;
      uint256 c_rt;
      uint256 s_rt;
      uint256 r_rt;;
-    }tr;
-char g_c[]="11112222333344445555666677778888999900001111";
-char sk[]="1234567891";    
-FieldT g=bigint_r(g_c);
-FieldT Gsk= bigint_r(sk) ;//私钥
-FieldT Gpk= g ^ Gsk.as_bigint();
-uint256 z;
-uint256 Spk;   
-int64_t n=0;
+}tr;
+
+extern char g_c[45];
+extern char sk[11];    
+extern FieldT g;
+extern FieldT Gsk;//私钥
+extern FieldT Gpk;
+extern uint256 z;
+extern uint256 Spk;  
+extern int64_t n;
+
 template<typename FieldT>
    transferOne test_js_z( uint256 apk_r, uint256 old_r,uint256 new_r,uint64_t v_1,uint256 ask_s)   
-    
 {
     uint64_t n=0;
     uint256 apk_s=prf(ask_s);
@@ -2044,8 +1681,6 @@ template<typename FieldT>
 
     unsigned char data[32*6];
 
-
-
     Elgamal_2apk_3v<FieldT> elg;
 
     elg.setG(g);
@@ -2055,23 +1690,23 @@ template<typename FieldT>
     elg.encrypt(apk_s,apk_r,v_1,n,n);//加密
 
 
-    protoboard<FieldT> pb;
+    libsnark::protoboard<FieldT> pb;
 
-    cout<<"1"<<endl;
+    std::cout<<"1"<<std::endl;
 
     joinsplit_gadget_z<FieldT> js_gad_z(pb,g,Gpk);      
     //joinsplit_gadget_z<FieldT> js_gad_z(pb,g);   
-    cout<<"2"<<endl;
+    std::cout<<"2"<<std::endl;
     
 
     js_gad_z.generate_r1cs_constraints();
-    cout<<"3"<<endl;
+    std::cout<<"3"<<std::endl;
     //产生密钥对
-     cout<<"miyao"<<endl;
+    std::cout<<"miyao"<<std::endl;
     auto cs = pb.get_constraint_system();
-    cout<<"miyao"<<endl;
-    auto keypair = r1cs_ppzksnark_generator<ppT>(cs);
-     cout<<"miyao"<<endl;
+    std::cout<<"miyao"<<std::endl;
+    auto keypair = libsnark::r1cs_ppzksnark_generator<ppT>(cs);
+    std::cout<<"miyao"<<std::endl;
     MerkleTreePath cm_path=getMerkleTreePath(ask_s,v_1,old_r);
     uint256 cm_rt=cm_path.root;
     
@@ -2102,7 +1737,7 @@ template<typename FieldT>
   
     auto pi = pb.primary_input();
     auto ai = pb.auxiliary_input();
-    auto proof = r1cs_ppzksnark_prover<ppT>(keypair.pk,pi,ai);
+    auto proof = libsnark::r1cs_ppzksnark_prover<ppT>(keypair.pk,pi,ai);
     transferOne t;
     t.pi=proof;
     t.vk=keypair.vk;
@@ -2116,88 +1751,88 @@ template<typename FieldT>
 }
 
 template<typename FieldT>
-class joinsplit_gadget_l : gadget<FieldT> {
+class joinsplit_gadget_l : libsnark::gadget<FieldT> {
 private:
     //FieldT g;
     //FieldT Gpk;
-    pb_variable<FieldT> g;
-    pb_variable<FieldT> Gpk;
+    libsnark::pb_variable<FieldT> g;
+    libsnark::pb_variable<FieldT> Gpk;
 
     // sk pk
-    std::shared_ptr<digest_variable<FieldT>> a_sk_s;//私钥  
-    std::shared_ptr<digest_variable<FieldT>> a_pk_s;//公钥
+    std::shared_ptr<libsnark::digest_variable<FieldT>> a_sk_s;//私钥  
+    std::shared_ptr<libsnark::digest_variable<FieldT>> a_pk_s;//公钥
     std::shared_ptr<prf_gadget<FieldT>> prf_gad;
     
     //sn
-    std::shared_ptr<digest_variable<FieldT>> sn_old;//序列号  
+    std::shared_ptr<libsnark::digest_variable<FieldT>> sn_old;//序列号  
     std::shared_ptr<sn_gadget<FieldT>> sn_gad;
 
     // commitment
-    pb_variable_array<FieldT> v_old;               //金额
-    std::shared_ptr<digest_variable<FieldT>> r_old;    //随机数
-    std::shared_ptr<digest_variable<FieldT>> commitment_old;//老承诺
+    libsnark::pb_variable_array<FieldT> v_old;               //金额
+    std::shared_ptr<libsnark::digest_variable<FieldT>> r_old;    //随机数
+    std::shared_ptr<libsnark::digest_variable<FieldT>> commitment_old;//老承诺
     std::shared_ptr<comm_gadget<FieldT>> comm_gad_old;
 
     // merkle tree
     std::shared_ptr<tree_gadget<FieldT>> tree_gad_cm;//承诺树
-    std::shared_ptr<digest_variable<FieldT>> root_cm;//公钥
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root_cm;//公钥
 
     std::shared_ptr<tree_gadget<FieldT>> tree_gad_apk_s;//付款方
-    std::shared_ptr<digest_variable<FieldT>> root_apk_s;//根
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root_apk_s;//根
     std::shared_ptr<tree_gadget<FieldT>> tree_gad_apk_r;//收款方
-    std::shared_ptr<digest_variable<FieldT>> root_apk_r;//根
+    std::shared_ptr<libsnark::digest_variable<FieldT>> root_apk_r;//根
 
     // balance
-    pb_variable_array<FieldT> v_new1,v_new2;
+    libsnark::pb_variable_array<FieldT> v_new1,v_new2;
 
     // new commitment
-    std::shared_ptr<digest_variable<FieldT>> a_pk_r;//收款方公钥
+    std::shared_ptr<libsnark::digest_variable<FieldT>> a_pk_r;//收款方公钥
     
-    std::shared_ptr<digest_variable<FieldT>> r_new1; //新的随机数
-    std::shared_ptr<digest_variable<FieldT>> commitment_new1;//新承诺
+    std::shared_ptr<libsnark::digest_variable<FieldT>> r_new1; //新的随机数
+    std::shared_ptr<libsnark::digest_variable<FieldT>> commitment_new1;//新承诺
     std::shared_ptr<comm_gadget<FieldT>> comm_gad_new1;
 
-    std::shared_ptr<digest_variable<FieldT>> r_new2; //新的随机数
-    std::shared_ptr<digest_variable<FieldT>> commitment_new2;//新承诺
+    std::shared_ptr<libsnark::digest_variable<FieldT>> r_new2; //新的随机数
+    std::shared_ptr<libsnark::digest_variable<FieldT>> commitment_new2;//新承诺
     std::shared_ptr<comm_gadget<FieldT>> comm_gad_new2;
 
 
     //elgamal   
   
     //3次加密的随机数
-    pb_variable_array<FieldT> random_y1;
-    pb_variable_array<FieldT> random_y2;
-    pb_variable_array<FieldT> random_y3;
+    libsnark::pb_variable_array<FieldT> random_y1;
+    libsnark::pb_variable_array<FieldT> random_y2;
+    libsnark::pb_variable_array<FieldT> random_y3;
 
-    pb_variable_array<FieldT> m;    //明文列表
-    pb_variable_array<FieldT> c1;   //密文1列表
-    pb_variable_array<FieldT> c2;   //密文2列表
+    libsnark::pb_variable_array<FieldT> m;    //明文列表
+    libsnark::pb_variable_array<FieldT> c1;   //密文1列表
+    libsnark::pb_variable_array<FieldT> c2;   //密文2列表
 
-    pb_variable_array<FieldT> apk1_array;//付款方公约
-    pb_variable_array<FieldT> apk2_array;//收款方公约
+    libsnark::pb_variable_array<FieldT> apk1_array;//付款方公约
+    libsnark::pb_variable_array<FieldT> apk2_array;//收款方公约
 
     //金额
-    pb_variable_array<FieldT> v1_array; 
-    pb_variable_array<FieldT> v2_array; 
-    pb_variable_array<FieldT> v3_array;
+    libsnark::pb_variable_array<FieldT> v1_array; 
+    libsnark::pb_variable_array<FieldT> v2_array; 
+    libsnark::pb_variable_array<FieldT> v3_array;
 
     ;
     std::shared_ptr<elgamal_gadget<FieldT>> elgamal_gad;
 
     int dimension;
 public:
-    joinsplit_gadget_l(protoboard<FieldT> &pb,FieldT &sg,FieldT &gpk) : gadget<FieldT>(pb) {
+    joinsplit_gadget_l(libsnark::protoboard<FieldT> &pb,FieldT &sg,FieldT &gpk) : libsnark::gadget<FieldT>(pb) {
         //公共参数长度：序列号256+老承诺哈希树根256+付款方256+收款方256+2*新承诺256+6个密文
         dimension=256+256+256+256+256+256+6+1+1;
 
         //分配顺序
-        sn_old.reset(new digest_variable<FieldT>(pb, 256, ""));
-        root_cm.reset(new digest_variable<FieldT>(pb, 256, ""));
-        root_apk_s.reset(new digest_variable<FieldT>(pb, 256, ""));
-        root_apk_r.reset(new digest_variable<FieldT>(pb, 256, ""));
+        sn_old.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        root_cm.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        root_apk_s.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        root_apk_r.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
 
-        commitment_new1.reset(new digest_variable<FieldT>(pb, 256, ""));
-        commitment_new2.reset(new digest_variable<FieldT>(pb, 256, ""));
+        commitment_new1.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        commitment_new2.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
 
         c1.allocate(pb,3,"c1");
         c2.allocate(pb,3,"c2");
@@ -2209,20 +1844,20 @@ public:
         this->pb.val(this->Gpk)=gpk;
 
         //ask,apk,prf
-        a_sk_s.reset(new digest_variable<FieldT>(pb, 256, ""));
-        a_pk_s.reset(new digest_variable<FieldT>(pb, 256, ""));
+        a_sk_s.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        a_pk_s.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         prf_gad.reset(new prf_gadget<FieldT>(
             pb,
             a_sk_s->bits,
             a_pk_s
         ));
-        cout<<"ask,apk,prf"<<endl;
+        std::cout<<"ask,apk,prf"<<std::endl;
 
         //comment
         v_old.allocate(pb, 64);
         
-        r_old.reset(new digest_variable<FieldT>(pb, 256, ""));
-        commitment_old.reset(new digest_variable<FieldT>(pb, 256, ""));
+        r_old.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        commitment_old.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         comm_gad_old.reset(new comm_gadget<FieldT>(
             pb,
             a_pk_s->bits,
@@ -2232,11 +1867,11 @@ public:
         ));
 
         //新承诺
-        a_pk_r.reset(new digest_variable<FieldT>(pb, 256, ""));
+        a_pk_r.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         
         v_new1.allocate(pb, 64);
-        r_new1.reset(new digest_variable<FieldT>(pb, 256, ""));
-        //commitment_new1.reset(new digest_variable<FieldT>(pb, 256, ""));
+        r_new1.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        //commitment_new1.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         comm_gad_new1.reset(new comm_gadget<FieldT>(
             pb,
             a_pk_r->bits,
@@ -2246,8 +1881,8 @@ public:
         ));
 
         v_new2.allocate(pb, 64);
-        r_new2.reset(new digest_variable<FieldT>(pb, 256, ""));
-        //commitment_new2.reset(new digest_variable<FieldT>(pb, 256, ""));
+        r_new2.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
+        //commitment_new2.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         comm_gad_new2.reset(new comm_gadget<FieldT>(
             pb,
             a_pk_r->bits,
@@ -2255,7 +1890,7 @@ public:
             r_new2->bits,
             commitment_new2
         ));
-        cout<<"comment"<<endl;
+        std::cout<<"comment"<<std::endl;
 
         //sn
         
@@ -2265,14 +1900,14 @@ public:
             r_old->bits,
             sn_old
         ));
-        cout<<"sn"<<endl;
+        std::cout<<"sn"<<std::endl;
 
         //merkle tree
-        //root.reset(new digest_variable<FieldT>(pb, 256, ""));
+        //root.reset(new libsnark::digest_variable<FieldT>(pb, 256, ""));
         tree_gad_cm.reset(new tree_gadget<FieldT>(pb,root_cm,commitment_old,""));
         tree_gad_apk_s.reset(new tree_gadget<FieldT>(pb,root_apk_s,a_pk_s,""));
         tree_gad_apk_r.reset(new tree_gadget<FieldT>(pb,root_apk_r,a_pk_r,""));
-        cout<<"tree"<<endl;
+        std::cout<<"tree"<<std::endl;
 
         //elgamal
         //c1.allocate(pb,3,"c1");
@@ -2303,7 +1938,7 @@ public:
                         v_new2,
                         v3_array
                     ));
-                cout<<"elg"<<endl;
+                std::cout<<"elg"<<std::endl;
     }
 
     void generate_r1cs_constraints() {
@@ -2322,7 +1957,7 @@ public:
 
         // value == new_value
         
-        this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+        this->pb.add_r1cs_constraint(libsnark::r1cs_constraint<FieldT>(
             1,
             packed_addition(v_old),
             packed_addition(v_new1)+packed_addition(v_new2)
@@ -2442,17 +2077,17 @@ public:
 };
 
 typedef struct transferZero{
-    
       uint256 SNold;/*老序列号*/
       uint256 krnew;/*接收方新承诺*/
       uint256 ksnew;/*发送方新承诺*/
-      r1cs_ppzksnark_proof<ppT> pi;/*零币证明*/
+      libsnark::r1cs_ppzksnark_proof<ppT> pi;/*零币证明*/
       unsigned char data[32*6];
-      r1cs_ppzksnark_verification_key<ppT> vk;/*加密数据*/
+      libsnark::r1cs_ppzksnark_verification_key<ppT> vk;/*加密数据*/
       uint256 c_rt;
       uint256 s_rt;
       uint256 r_rt;
-    }trs;
+}trs;
+
 template<typename FieldT>
 transferZero test_js_l(uint256 apk_r/*接收方公钥*/,uint256 new_r1/*新随机数1*/,uint256 new_r2/*新随机数2*/,uint64_t v_1,uint256 ask_s/*发送方私钥*/,uint256 old_r/*老随机数*/,uint64_t v_2) 
 {
@@ -2477,19 +2112,19 @@ transferZero test_js_l(uint256 apk_r/*接收方公钥*/,uint256 new_r1/*新随�
 
 
  
-    protoboard<FieldT> pb;
+    libsnark::protoboard<FieldT> pb;
 
-    cout<<"1"<<endl;
+    std::cout<<"1"<<std::endl;
 
     joinsplit_gadget_l<FieldT> js_gad_l(pb,g,Gpk);        
-    cout<<"2"<<endl;
+    std::cout<<"2"<<std::endl;
     //pb.set_input_sizes(dimension);
 
     js_gad_l.generate_r1cs_constraints();
-    cout<<"3"<<endl;
+    std::cout<<"3"<<std::endl;
     //产生密钥对
     auto cs = pb.get_constraint_system();
-    auto keypair = r1cs_ppzksnark_generator<ppT>(cs);
+    auto keypair = libsnark::r1cs_ppzksnark_generator<ppT>(cs);
    
     MerkleTreePath cm_path=getMerkleTreePath_lb(ask_s,v_1,v_2,old_r);
     uint256 cm_rt=cm_path.root;
@@ -2524,7 +2159,7 @@ transferZero test_js_l(uint256 apk_r/*接收方公钥*/,uint256 new_r1/*新随�
   
     auto pi = pb.primary_input();
     auto ai = pb.auxiliary_input();
-    auto proof = r1cs_ppzksnark_prover<ppT>(keypair.pk,pi,ai);
+    auto proof = libsnark::r1cs_ppzksnark_prover<ppT>(keypair.pk,pi,ai);
    
     transferZero tr;
     tr.pi=proof;
@@ -2540,77 +2175,10 @@ transferZero test_js_l(uint256 apk_r/*接收方公钥*/,uint256 new_r1/*新随�
 }
 
 //加密
-    std::string EncodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData )  
-{  
-    if (strPemFileName.empty() || strData.empty())  
-    {  
-        assert(false);  
-        return "";  
-    }  
-    FILE* hPubKeyFile = fopen(strPemFileName.c_str(), "rb");  
-    if( hPubKeyFile == NULL )  
-    {  
-        assert(false);  
-        return "";   
-    }  
-    std::string strRet;  
-    RSA* pRSAPublicKey = RSA_new();  
-    if(PEM_read_RSA_PUBKEY(hPubKeyFile, &pRSAPublicKey, 0, 0) == NULL)  
-    {  
-        assert(false);  
-        return "";  
-    }  
-  
-    int nLen = RSA_size(pRSAPublicKey);  
-    char* pEncode = new char[nLen + 1];  
-    int ret = RSA_public_encrypt(strData.length(), (const unsigned char*)strData.c_str(), (unsigned char*)pEncode, pRSAPublicKey, RSA_PKCS1_PADDING);  
-    if (ret >= 0)  
-    {  
-        strRet = std::string(pEncode, ret);  
-    }  
-    delete[] pEncode;  
-    RSA_free(pRSAPublicKey);  
-    fclose(hPubKeyFile);  
-    CRYPTO_cleanup_all_ex_data();   
-    return strRet;  
-}  
+std::string EncodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData );
   
 //解密
-std::string DecodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData )  
-{  
-    if (strPemFileName.empty() || strData.empty())  
-    {  
-        assert(false);  
-        return "";  
-    }  
-    FILE* hPriKeyFile = fopen(strPemFileName.c_str(),"rb");  
-    if( hPriKeyFile == NULL )  
-    {  
-        assert(false);  
-        return "";  
-    }  
-    std::string strRet;  
-    RSA* pRSAPriKey = RSA_new();  
-    if(PEM_read_RSAPrivateKey(hPriKeyFile, &pRSAPriKey, 0, 0) == NULL)  
-    {  
-        assert(false);  
-        return "";  
-    }  
-    int nLen = RSA_size(pRSAPriKey);  
-    char* pDecode = new char[nLen+1];  
-  
-    int ret = RSA_private_decrypt(strData.length(), (const unsigned char*)strData.c_str(), (unsigned char*)pDecode, pRSAPriKey, RSA_PKCS1_PADDING);  
-    if(ret >= 0)  
-    {  
-        strRet = std::string((char*)pDecode, ret);  
-    }  
-    delete [] pDecode;  
-    RSA_free(pRSAPriKey);  
-    fclose(hPriKeyFile);  
-    CRYPTO_cleanup_all_ex_data();   
-    return strRet;  
-}  
-    
+std::string DecodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData );
 
 typedef struct msgMintRequest{
     uint256 Upk;//用户公钥
@@ -2618,52 +2186,22 @@ typedef struct msgMintRequest{
     int64_t v;//金额
     uint256 p;//随机数
 }msg;
-msgMintRequest makeMintRequest(uint256 Usk/*用户私钥*/,uint256 p/*随机数*/, int64_t v/*金额*/)
-{
-    msgMintRequest tmp1;
-    tmp1.Upk=prf(Usk);
-    tmp1.kmint=cm(tmp1.Upk,v,p);
-    tmp1.v=v;
-    tmp1.p=p;
-    return tmp1;
-}
+
+msgMintRequest makeMintRequest(uint256 Usk/*用户私钥*/,uint256 p/*随机数*/, int64_t v/*金额*/);
+
 typedef struct msgMint{
      uint256 kmint;
      unsigned char data[32*6];
-     string Sigpub;
+     std::string Sigpub;
 }ms;
-msgMint makeMsgMint(uint256 kmint,int64_t v,uint256 upk)
-{
-     
-   msgMint tmp2;
 
-   string k;
-
-   k=kmint.ToString();
-   
-   Elgamal_2apk_3v<FieldT> G1;
-
-   G1.setG(g);
-    
-   G1.setPk(Gpk);
-
-   G1.encrypt(upk,z,v,n,n);/*z，n为数据格式不同的0，前面有定义*/
-
-   G1.getEncryptedData(tmp2.data);//用setEncryptdata函数即可解密数据
-   
-   tmp2.Sigpub= EncodeRSAKeyFile( "rsa_public_key.pem", k );//基于openssl库的公钥加密，用私钥解密。
-
-  
-
-  return tmp2;
-}
+msgMint makeMsgMint(uint256 kmint,int64_t v,uint256 upk);
 
 
 template<typename FieldT>
 transferZero makeTransferZero(uint256 Rpk/*接收方公钥*/,uint256 pr1/*新随机数1*/,uint256 pr2/*新随机数2*/,uint64_t vr,uint256 Ssk/*发送发私钥*/,uint256 ps,uint64_t vs)
 { 
-     transferZero tmp3=test_js_l<FieldT>( Rpk, pr1,pr2,vr,Ssk,ps,vs);     
-
+    transferZero tmp3=test_js_l<FieldT>( Rpk, pr1,pr2,vr,Ssk,ps,vs);     
     return tmp3;
 }
 
@@ -2677,7 +2215,7 @@ transferOne makeTransferOne(uint256 Rpk/*接收方公钥*/,uint256 ps/*老随机
 }
 
 template<typename FieldT>
-bool transferZeroVerify(uint256 SNold ,uint256 krnew,uint256 ksnew,  unsigned char *data, r1cs_ppzksnark_proof<ppT> pr,r1cs_ppzksnark_verification_key<ppT> vk,uint256 cm_rt,uint256 apk_s_rt,uint256 apk_r_rt)
+bool transferZeroVerify(uint256 SNold ,uint256 krnew,uint256 ksnew,  unsigned char *data, libsnark::r1cs_ppzksnark_proof<ppT> pr,libsnark::r1cs_ppzksnark_verification_key<ppT> vk,uint256 cm_rt,uint256 apk_s_rt,uint256 apk_r_rt)
 { 
 
      std::vector<FieldT> pi_v;
@@ -2767,17 +2305,17 @@ bool transferZeroVerify(uint256 SNold ,uint256 krnew,uint256 ksnew,  unsigned ch
     pi_v.push_back(Gpk);
 
     //auto pi_v = pb.primary_input();
-    if(r1cs_ppzksnark_verifier_strong_IC<ppT>(vk,pi_v,pr)) {
-        cout << "Verified!" << endl;
+    if(libsnark::r1cs_ppzksnark_verifier_strong_IC<ppT>(vk,pi_v,pr)) {
+        std::cout << "Verified!" << std::endl;
         return 1;
     } 
     else {
-        cout << "Failed to verify!" << endl;
+        std::cout << "Failed to verify!" << std::endl;
         return 0;
     }
 }
 template<typename FieldT>
-bool transferOneVerify(uint256 SNold,uint256 krnew, uint256 cm_rt,uint256 apk_s_rt,uint256 apk_r_rt,unsigned char *data,r1cs_ppzksnark_verification_key<ppT> vk, r1cs_ppzksnark_proof<ppT> pr)
+bool transferOneVerify(uint256 SNold,uint256 krnew, uint256 cm_rt,uint256 apk_s_rt,uint256 apk_r_rt,unsigned char *data,libsnark::r1cs_ppzksnark_verification_key<ppT> vk, libsnark::r1cs_ppzksnark_proof<ppT> pr)
 {     
     std::vector<FieldT> pi_v;    
 
@@ -2852,20 +2390,15 @@ bool transferOneVerify(uint256 SNold,uint256 krnew, uint256 cm_rt,uint256 apk_s_
     pi_v.push_back(Gpk);
 
     //auto pi_v = pb.primary_input();
-    if(r1cs_ppzksnark_verifier_strong_IC<ppT>(vk,pi_v,pr)) {
-      cout<<"Verified!"<<endl;
+    if(libsnark::r1cs_ppzksnark_verifier_strong_IC<ppT>(vk,pi_v,pr)) {
+      std::cout<<"Verified!"<<std::endl;
       return 1;
     } 
     else {
-      cout<<"Failed to verify!"<<endl;
+      std::cout<<"Failed to verify!"<<std::endl;
       return 0;
     }
 };
-
-void isSnarkOk() {
-    std::cout<<"snark ok\n";
-}
-
 
 }
 

@@ -10,10 +10,7 @@ include(CableBuildType)
 include(CableToolchains)
 include(GNUInstallDirs)
 
-INCLUDE_DIRECTORIES("./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
-#INCLUDE_DIRECTORIES("./libsnark/libff-n" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
-LINK_DIRECTORIES("./libsnark/libsnark/build" "./libsnark/libsnark/build/src" "./libsnark/libsnark/build/third_party" "./libsnark/libff/build/src" "./libsnark/zcash_w/build")
-LINK_DIRECTORIES("/usr/local/lib")
+
 if(UNIX)
     # Build deps with PIC to allow building shared libraries.
     set(toolchain cxx11-pic)
@@ -52,6 +49,12 @@ HunterGate(
 
 project(aleth)
 set(PROJECT_VERSION 1.4.0)
+
+INCLUDE_DIRECTORIES("./libsnark/donator2" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
+#INCLUDE_DIRECTORIES("./libsnark/libff-n" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
+LINK_DIRECTORIES("./libsnark/build" "./libsnark/libsnark/build" "./libsnark/libsnark/build/src" "./libsnark/libsnark/build/third_party" "./libsnark/libff/build/src" "./libsnark/zcash_w/build")
+LINK_DIRECTORIES("/usr/local/lib")
+
 
 #if (NOT EXISTS ${CMAKE_SOURCE_DIR}/evmjit/.git)
 #    message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")

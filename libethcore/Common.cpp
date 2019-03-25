@@ -93,7 +93,7 @@ vector<pair<u256, string>> const& units()
 	return s_units;
 }
 
-std::string formatBalance(bigint const& _b)
+std::string formatBalance(dev::bigint const& _b)
 {
 	ostringstream ret;
 	u256 b;

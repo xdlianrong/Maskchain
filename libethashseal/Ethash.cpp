@@ -96,7 +96,7 @@ void Ethash::verify(Strictness _s, BlockHeader const& _bi, BlockHeader const& _p
         auto expected = calculateDifficulty(_bi, _parent);
         auto difficulty = _bi.difficulty();
         if (difficulty != expected)
-            BOOST_THROW_EXCEPTION(InvalidDifficulty() << RequirementError((bigint)expected, (bigint)difficulty));
+            BOOST_THROW_EXCEPTION(InvalidDifficulty() << RequirementError((dev::bigint)expected, (dev::bigint)difficulty));
     }
 
     // check it hashes according to proof of work or that it's the genesis block.
@@ -171,21 +171,21 @@ u256 Ethash::calculateDifficulty(BlockHeader const& _bi, BlockHeader const& _par
     auto const& difficultyBoundDivisor = chainParams().difficultyBoundDivisor;
     auto const& durationLimit = chainParams().durationLimit;
 
-    bigint target;    // stick to a bigint for the target. Don't want to risk going negative.
+    dev::bigint target;    // stick to a dev::bigint for the target. Don't want to risk going negative.
     if (_bi.number() < chainParams().homesteadForkBlock)
         // Frontier-era difficulty adjustment
         target = _bi.timestamp() >= _parent.timestamp() + durationLimit ? _parent.difficulty() - (_parent.difficulty() / difficultyBoundDivisor) : (_parent.difficulty() + (_parent.difficulty() / difficultyBoundDivisor));
     else
     {
-        bigint const timestampDiff = bigint(_bi.timestamp()) - _parent.timestamp();
-        bigint const adjFactor = _bi.number() < chainParams().byzantiumForkBlock ?
-            max<bigint>(1 - timestampDiff / 10, -99) : // Homestead-era difficulty adjustment
-            max<bigint>((_parent.hasUncles() ? 2 : 1) - timestampDiff / 9, -99); // Byzantium-era difficulty adjustment
+        dev::bigint const timestampDiff = dev::bigint(_bi.timestamp()) - _parent.timestamp();
+        dev::bigint const adjFactor = _bi.number() < chainParams().byzantiumForkBlock ?
+            max<dev::bigint>(1 - timestampDiff / 10, -99) : // Homestead-era difficulty adjustment
+            max<dev::bigint>((_parent.hasUncles() ? 2 : 1) - timestampDiff / 9, -99); // Byzantium-era difficulty adjustment
 
         target = _parent.difficulty() + _parent.difficulty() / 2048 * adjFactor;
     }
 
-    bigint o = target;
+    dev::bigint o = target;
     unsigned exponentialIceAgeBlockNumber = unsigned(_parent.number() + 1);
 
     // EIP-649 modifies exponentialIceAgeBlockNumber
@@ -199,10 +199,10 @@ u256 Ethash::calculateDifficulty(BlockHeader const& _bi, BlockHeader const& _par
 
     unsigned periodCount = exponentialIceAgeBlockNumber / c_expDiffPeriod;
     if (periodCount > 1)
-        o += (bigint(1) << (periodCount - 2));    // latter will eventually become huge, so ensure it's a bigint.
+        o += (dev::bigint(1) << (periodCount - 2));    // latter will eventually become huge, so ensure it's a dev::bigint.
 
-    o = max<bigint>(minimumDifficulty, o);
-    return u256(min<bigint>(o, std::numeric_limits<u256>::max()));
+    o = max<dev::bigint>(minimumDifficulty, o);
+    return u256(min<dev::bigint>(o, std::numeric_limits<u256>::max()));
 }
 
 void Ethash::populateFromParent(BlockHeader& _bi, BlockHeader const& _parent) const

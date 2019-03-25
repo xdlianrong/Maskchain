@@ -32,11 +32,11 @@ PrecompiledContract::PrecompiledContract(
     PrecompiledExecutor const& _exec,
     u256 const& _startingBlock
 ):
-    PrecompiledContract([=](bytesConstRef _in) -> bigint
+    PrecompiledContract([=](bytesConstRef _in) -> dev::bigint
     {
-        bigint s = _in.size();
-        bigint b = _base;
-        bigint w = _word;
+        dev::bigint s = _in.size();
+        dev::bigint b = _base;
+        dev::bigint w = _word;
         return b + (s + 31) / 32 * w;
     }, _exec, _startingBlock)
 {}

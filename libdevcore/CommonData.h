@@ -129,11 +129,11 @@ bytes asNibbles(bytesConstRef const& _s);
 /// The size of the collection object will be unchanged. If it is too small, it will not represent the
 /// value properly, if too big then the additional elements will be zeroed out.
 /// @a Out will typically be either std::string or bytes.
-/// @a T will typically by unsigned, u160, u256 or bigint.
+/// @a T will typically by unsigned, u160, u256 or dev::bigint.
 template <class T, class Out>
 inline void toBigEndian(T _val, Out& o_out)
 {
-	static_assert(std::is_same<bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or bigint supported"); //bigint does not carry sign bit on shift
+	static_assert(std::is_same<dev::bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or dev::bigint supported"); //dev::bigint does not carry sign bit on shift
 	for (auto i = o_out.size(); i != 0; _val >>= 8, i--)
 	{
 		T v = _val & (T)0xff;
@@ -143,7 +143,7 @@ inline void toBigEndian(T _val, Out& o_out)
 
 /// Converts a big-endian byte-stream represented on a templated collection to a templated integer value.
 /// @a _In will typically be either std::string or bytes.
-/// @a T will typically by unsigned, u160, u256 or bigint.
+/// @a T will typically by unsigned, u160, u256 or dev::bigint.
 template <class T, class _In>
 inline T fromBigEndian(_In const& _bytes)
 {
@@ -164,7 +164,7 @@ inline bytes toBigEndian(u160 _val) { bytes ret(20); toBigEndian(_val, ret); ret
 template <class T>
 inline bytes toCompactBigEndian(T _val, unsigned _min = 0)
 {
-	static_assert(std::is_same<bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or bigint supported"); //bigint does not carry sign bit on shift
+	static_assert(std::is_same<dev::bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or dev::bigint supported"); //dev::bigint does not carry sign bit on shift
 	int i = 0;
 	for (T v = _val; v; ++i, v >>= 8) {}
 	bytes ret(std::max<unsigned>(_min, i), 0);
@@ -181,7 +181,7 @@ inline bytes toCompactBigEndian(byte _val, unsigned _min = 0)
 template <class T>
 inline std::string toCompactBigEndianString(T _val, unsigned _min = 0)
 {
-	static_assert(std::is_same<bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or bigint supported"); //bigint does not carry sign bit on shift
+	static_assert(std::is_same<dev::bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or dev::bigint supported"); //dev::bigint does not carry sign bit on shift
 	int i = 0;
 	for (T v = _val; v; ++i, v >>= 8) {}
 	std::string ret(std::max<unsigned>(_min, i), '\0');
@@ -222,7 +222,7 @@ unsigned commonPrefix(T const& _t, _U const& _u)
 template <class T>
 inline unsigned bytesRequired(T _i)
 {
-	static_assert(std::is_same<bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or bigint supported"); //bigint does not carry sign bit on shift
+	static_assert(std::is_same<dev::bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or dev::bigint supported"); //dev::bigint does not carry sign bit on shift
 	unsigned i = 0;
 	for (; _i != 0; ++i, _i >>= 8) {}
 	return i;

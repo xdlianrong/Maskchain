@@ -124,7 +124,7 @@ private:
 	void throwBadStack(unsigned _removed, unsigned _added);
 	void throwRevertInstruction(owning_bytes_ref&& _output);
 	void throwDisallowedStateChange();
-	void throwBufferOverrun(bigint const& _enfOfAccess);
+	void throwBufferOverrun(dev::bigint const& _enfOfAccess);
 
 	std::vector<uint64_t> m_beginSubs;
 	std::vector<uint64_t> m_jumpDests;

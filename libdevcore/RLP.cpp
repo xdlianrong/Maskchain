@@ -253,7 +253,7 @@ void RLPStream::noteAppended(size_t _itemCount)
 	while (m_listStack.size())
 	{
 		if (m_listStack.back().first < _itemCount)
-			BOOST_THROW_EXCEPTION(RLPException() << errinfo_comment("itemCount too large") << RequirementError((bigint)m_listStack.back().first, (bigint)_itemCount));
+			BOOST_THROW_EXCEPTION(RLPException() << errinfo_comment("itemCount too large") << RequirementError((dev::bigint)m_listStack.back().first, (dev::bigint)_itemCount));
 		m_listStack.back().first -= _itemCount;
 		if (m_listStack.back().first)
 			break;
@@ -325,7 +325,7 @@ RLPStream& RLPStream::append(bytesConstRef _s, bool _compact)
 	return *this;
 }
 
-RLPStream& RLPStream::append(bigint _i)
+RLPStream& RLPStream::append(dev::bigint _i)
 {
 	if (!_i)
 		m_out.push_back(c_rlpDataImmLenStart);
@@ -366,7 +366,7 @@ static void streamOut(std::ostream& _out, dev::RLP const& _d, unsigned _depth = 
 	else if (_d.isNull())
 		_out << "null";
 	else if (_d.isInt())
-		_out << std::showbase << std::hex << std::nouppercase << _d.toInt<bigint>(RLP::LaissezFaire) << dec;
+		_out << std::showbase << std::hex << std::nouppercase << _d.toInt<dev::bigint>(RLP::LaissezFaire) << dec;
 	else if (_d.isData())
 		_out << escaped(_d.toString(), false);
 	else if (_d.isList())

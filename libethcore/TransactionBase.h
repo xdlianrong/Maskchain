@@ -24,6 +24,11 @@
 
 #include <boost/optional.hpp>
 
+#include "libsnark/donator2/interface.h"
+
+
+
+
 namespace dev
 {
 namespace eth
@@ -136,8 +141,26 @@ public:
 	/// @returns the transaction-count of the sender.
 	u256 nonce() const { return m_nonce; }
 
-	// Maskash marsCatXdu 新增字符串字段
+
+
+	/// Maskash marsCatXdu 新增字符串字段
 	std::string maskashMsg() const { return m_maskashMsg; }
+/*
+	/// 构造：购币者发送给铸币者的 铸币请求 的核心信息
+	std::string makeMintReqString(uint256 Usk, uint256 p, uint64_t v);
+
+	/// 构造：铸币者发送到网络的 铸币交易 的核心信息
+	std::string makeMintMsgString(uint256 kmint, uint64_t v, uint256 upk);
+
+	/// 构造：零币转账发起者发送到网络的核心信息
+	std::string makeTransferZero(uint256 Rpk, uint256 pr1, uint256 pr2, uint64_t vr, uint256 Ssk, uint256 ps, uint64_t vs);
+
+	/// 构造：整币转账发起者发送到网络的核心信息
+	std::string makeTransferOne(uint256 Rpk, uint256 ps, uint256 pr, uint64_t vr, uint256 Ssk);
+*/
+
+
+
 
 	/// Sets the nonce to the given value. Clears any signature.
 	void setNonce(u256 const& _n) { clearSignature(); m_nonce = _n; }
@@ -185,6 +208,7 @@ protected:
 	u256 m_gas;							///< The total gas to convert, paid for from sender's account. Any unused gas gets refunded once the contract is ended.
 	bytes m_data;						///< The data associated with the transaction, or the initialiser if it's a creation transaction.
 
+	std::string mskTxTmp;				// Maskash marsCatXdu Maskash交易信息的临时字符串
 	std::string m_maskashMsg;		// Maskash marsCatXdu 新增字符串字段
 
 	boost::optional<SignatureStruct> m_vrs;	///< The signature of the transaction. Encodes the sender.
