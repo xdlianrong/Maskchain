@@ -44,6 +44,8 @@ endif()
 
 add_library(web3jsonrpc ${sources})
 
+target_include_directories(web3jsonrpc PRIVATE ../build/deps/include/libff ../build/deps/include/libsnark)
+
 jsonrpcstub_create(
     web3jsonrpc eth.json
     dev::rpc::EthFace ${CMAKE_CURRENT_SOURCE_DIR} EthFace

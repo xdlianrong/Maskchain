@@ -26,7 +26,7 @@
 #include "TransactionBase.h"
 #include "EVMSchedule.h"
 
-#include "libsnark/donator2/interface.h"
+#include "libmsksnark/interface.h"
 
 using namespace std;
 using namespace dev;

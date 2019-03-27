@@ -7,7 +7,7 @@
 #include "common/utils.hpp"
 #include "gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp"
 #include "common/default_types/r1cs_ppzksnark_pp.hpp"
-#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"/*以上引用均来自donator2同级别的libsnark*/
 
 #include "crypto/sha256.h"
 #include "uint256.h"
@@ -22,7 +22,7 @@
 #include <cassert>  
 #include <sys/time.h>
 #include <fstream>
-
+#include <cstdint>
 
 using ppT = libsnark::default_r1cs_ppzksnark_pp; 
 using FieldT = ppT::Fp_type;
@@ -30,19 +30,54 @@ using FieldT = ppT::Fp_type;
 
 namespace msk{
 
-void isSnarkOk();
+typedef libff::bigint<libff::alt_bn128_r_limbs> bigint_r;
+
+static char g_c[45]="11112222333344445555666677778888999900001111";
+static char sk[11]="1234567891";    
+static FieldT g=bigint_r(msk::g_c);
+static FieldT Gsk= bigint_r(msk::sk) ;//私钥
+static FieldT Gpk= msk::g ^ msk::Gsk.as_bigint();
+static uint256 z;
+static uint256 Spk;   
+static const int64_t n=0;
+
+//void isSnarkOk();
 
 uint256 one_hash(const unsigned char *data, size_t len);
 
-std::vector<unsigned char> convertIntToVectorLE(const uint64_t val_int);
+//std::vector<unsigned char> convertIntToVectorLE(const uint64_t val_int);
 
-std::vector<bool> convertBytesVectorToVector(const std::vector<unsigned char>& bytes);
+static std::vector<unsigned char> convertIntToVectorLE(const uint64_t val_int) {
+    std::vector<unsigned char> bytes;
+    for(size_t i = 0; i < 8; i++) {
+        bytes.push_back(val_int >> (i * 8));
+    }
+    return bytes;
+}
+
+//std::vector<bool> convertBytesVectorToVector(const std::vector<unsigned char>& bytes);
 //uint256->vector<bool>->libsnark::pb_variable_array<FieldT>，使用fill_with_bits：
 //zk_vpub_old.fill_with_bits(this->pb,uint64_to_bool_vector(vpub_old)));
+static std::vector<bool> convertBytesVectorToVector(const std::vector<unsigned char>& bytes) {
+    std::vector<bool> ret;
+    ret.resize(bytes.size() * 8);
+    unsigned char c;
+    for (size_t i = 0; i < bytes.size(); i++) {
+        c = bytes.at(i);
+        for (size_t j = 0; j < 8; j++) {
+            ret.at((i*8)+j) = (c >> (7-j)) & 1;
+        }
+    }
+    return ret;
+}
 std::vector<bool> uint256_to_bool_vector(uint256 input);
 
-std::vector<bool> uint64_to_bool_vector(uint64_t input);
-
+//std::vector<bool> uint64_to_bool_vector(uint64_t input);
+static std::vector<bool> uint64_to_bool_vector(uint64_t input) {
+    auto num_bv = msk::convertIntToVectorLE(input);
+    
+    return msk::convertBytesVectorToVector(num_bv);
+}
 template<typename T>
 T swap_endianness_u64(T v) {
     if (v.size() != 64) {
@@ -105,8 +140,18 @@ public:
         hasher->generate_r1cs_witness();
     }
 };
+static uint256 combine(const uint256& a, const uint256& b)
+{
+    uint256 res ;
 
-uint256 prf(uint256 a_sk);
+    CSHA256 hasher;
+    hasher.Write(a.begin(), 32);
+    hasher.Write(b.begin(), 32);
+    hasher.FinalizeNoPadding(res.begin());
+
+    return res;
+}
+//uint256 prf(uint256 a_sk);
 
 template<typename FieldT>
 class sn_gadget : libsnark::gadget<FieldT> {
@@ -147,7 +192,67 @@ public:
     }
 };
 
-uint256 sn(uint256 a_sk,uint256 r);
+//uint256 sn(uint256 a_sk,uint256 r);
+
+static uint256 prf(uint256 a_sk){
+    CSHA256 hasher;
+   
+    uint256 result;
+
+    //H(a_sk a_sk)
+    hasher.Write(a_sk.begin(), 32);
+    hasher.Write(a_sk.begin(), 32);
+    hasher.FinalizeNoPadding(result.begin());
+  
+    return result;
+}
+
+static uint256 sn(uint256 a_sk,uint256 r){
+    CSHA256 hasher;
+  
+    uint256 result;
+
+    //H(a_sk r)
+    hasher.Write(a_sk.begin(), 32);
+    hasher.Write(r.begin(), 32);
+    hasher.FinalizeNoPadding(result.begin());
+  
+    return result;
+}
+
+static uint256 cm(uint256 a_pk, int64_t v, uint256 r) {
+    CSHA256 hasher1;
+    CSHA256 hasher2;
+
+    uint256 imt;
+    uint256 result;
+
+    //H(a_pk )
+    hasher1.Write(a_pk.begin(), 32);
+
+    //H(apk,v,v,v,v)
+    auto value_vec = msk::convertIntToVectorLE(v);
+    hasher1.Write(&value_vec[0], value_vec.size());
+    hasher1.Write(&value_vec[0], value_vec.size());
+    hasher1.Write(&value_vec[0], value_vec.size());
+    hasher1.Write(&value_vec[0], value_vec.size());
+    hasher1.FinalizeNoPadding(imt.begin());
+
+    //H( H(apk,v,v,v,v),r)
+    hasher2.Write(imt.begin(), 32);
+    hasher2.Write(r.begin(), 32);
+    hasher2.FinalizeNoPadding(result.begin());
+  
+    return result;
+}
+
+static void outBoolVector(std::vector<bool> &v){
+     for(size_t i=0;i<v.size();i++){
+
+        std::cout<<v[i]<<" , ";
+    }
+    std::cout<<std::endl;
+}
 
 template<typename FieldT>
 class comm_gadget : libsnark::gadget<FieldT> {
@@ -259,9 +364,20 @@ std::vector<bool> convertFpToBoolVector(FieldT fp){
 //十六进制字符串转换为字节流  
 void HexStrToByte(const char* source, unsigned char* dest, int sourceLen);
 
-void Hex2Str( const char *sSrc,  char *sDest, int nSrcLen );
+//void Hex2Str( const char *sSrc,  char *sDest, int nSrcLen );
 
-typedef libff::bigint<libff::alt_bn128_r_limbs> bigint_r;
+static void Hex2Str( const char *sSrc,  char *sDest, int nSrcLen )  
+{  
+    int  i;  
+    char szTmp[3];  
+  
+    for( i = 0; i < nSrcLen; i++ )  
+    {  
+        sprintf( szTmp, "%02x", (unsigned char) sSrc[i] );  
+        memcpy( &sDest[i * 2], szTmp, 2 );  
+    }  
+    return ;  
+}
 #define bigint_len 32
 
 //通过拷贝二进制数组构造bigint
@@ -1232,14 +1348,266 @@ public:
         }
     }
 };
+static MerkleTreePath getMerkleTreePath_apk_s(uint256 ask_s, uint256 apk_r){
+    //叶子
+    MerkleTree apks;
+    MerkleTreePath mps;
+    apks.inite(4);
 
-MerkleTreePath getMerkleTreePath_apk_s(uint256 ask_s, uint256 apk_r);
+    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
 
-MerkleTreePath getMerkleTreePath_apk_r(uint256 apk_r);
+    uint256 apk_s=msk::prf(ask_s);
 
-MerkleTreePath getMerkleTreePath(uint256 ask_s,uint64_t v_1,uint256 old_r);
+    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
+    uint256 new_r=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
 
-MerkleTreePath getMerkleTreePath_lb(uint256 ask_s,uint64_t v1,uint64_t v2,uint256 old_r);
+    uint256 u3=apk_r;
+    uint256 u4=apk_s;
+
+    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
+    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
+    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
+    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
+
+    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
+    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
+    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
+    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
+
+    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+
+    apks.creatTree();
+    apks.addLeaf(u1);
+    apks.addLeaf(u2);
+    apks.addLeaf(u3);
+    apks.addLeaf(u4);
+    apks.addLeaf(u5);
+    apks.addLeaf(u6);
+    apks.addLeaf(u7);
+    apks.addLeaf(u8);
+    apks.addLeaf(u9);
+    apks.addLeaf(u10);
+    apks.addLeaf(u11);
+    apks.addLeaf(u12);
+    apks.addLeaf(u13);
+    apks.addLeaf(u14);
+    apks.addLeaf(u15);
+    apks.addLeaf(u16);
+    mps=apks.getPath(u4);
+    return mps;
+}
+
+static MerkleTreePath getMerkleTreePath_apk_r(uint256 apk_r){
+
+    //叶子
+    MerkleTree apkr;
+    MerkleTreePath mpr;
+    apkr.inite(4);
+
+     //叶子
+    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
+
+    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 apk_s=msk::prf(ask_s);
+
+    uint64_t v_1=5;
+    uint64_t v_2=0;
+    uint64_t v_3=0;
+
+    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
+    uint256 new_r=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+
+    uint256 u3=apk_r;
+    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
+
+    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
+    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
+    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
+    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
+
+    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
+    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
+    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
+    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
+
+    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+
+    apkr.creatTree();
+    apkr.addLeaf(u1);
+    apkr.addLeaf(u2);
+    apkr.addLeaf(u3);
+    apkr.addLeaf(u4);
+    apkr.addLeaf(u5);
+    apkr.addLeaf(u6);
+    apkr.addLeaf(u7);
+    apkr.addLeaf(u8);
+    apkr.addLeaf(u9);
+    apkr.addLeaf(u10);
+    apkr.addLeaf(u11);
+    apkr.addLeaf(u12);
+    apkr.addLeaf(u13);
+    apkr.addLeaf(u14);
+    apkr.addLeaf(u15);
+    apkr.addLeaf(u16);
+    mpr=apkr.getPath(u3);
+    return mpr;
+}
+
+
+static MerkleTreePath getMerkleTreePath(uint256 ask_s,uint64_t v_1,uint256 old_r)
+{  //叶子
+    MerkleTree cmt;
+    MerkleTreePath mp;
+    cmt.inite(4);
+    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
+
+    uint256 apk_s=msk::prf(ask_s);
+
+    uint256 u3=msk::cm(apk_s,v_1,old_r);
+    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
+
+    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
+    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
+    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
+    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
+
+    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
+    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
+    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
+    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
+
+    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    
+   
+    cmt.creatTree();
+    cmt.addLeaf(u1);
+    cmt.addLeaf(u2);  
+    cmt.addLeaf(u3);
+    cmt.addLeaf(u4);   
+    cmt.addLeaf(u5);
+    cmt.addLeaf(u6);  
+    cmt.addLeaf(u7);
+    cmt.addLeaf(u8); 
+    cmt.addLeaf(u9);
+    cmt.addLeaf(u10);  
+    cmt.addLeaf(u11);
+    cmt.addLeaf(u12);   
+    cmt.addLeaf(u13);
+    cmt.addLeaf(u14);  
+    cmt.addLeaf(u15);
+    cmt.addLeaf(u16); 
+    mp=cmt.getPath(u3);
+    return mp;
+}
+
+
+static MerkleTreePath getMerkleTreePath_lb(uint256 ask_s,uint64_t v1,uint64_t v2,uint256 old_r){
+
+    //叶子
+    MerkleTree cmt;
+    MerkleTreePath mp;
+    cmt.inite(4);
+    uint256 u1=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+    uint256 u2=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d1");
+
+    uint256 apk_s=msk::prf(ask_s);
+   
+    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
+
+
+    uint256 u3=msk::cm(apk_s,v1+v2,old_r);
+    uint256 u4=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b1167d3");
+
+    uint256 u5=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a10");
+    uint256 u6=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116721");
+    uint256 u7=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68a32");
+    uint256 u8=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b116743");
+
+    uint256 u9=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af18ad0");
+    uint256 u10=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b2167d1");
+    uint256 u11=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a368ad2");
+    uint256 u12=uint256S("effd0b7f1ccba1162ee816f731c62b4859305141990e5c0ace40d33d0b4167d3");
+
+    uint256 u13=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u14=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u15=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+    uint256 u16=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9a568a10");
+     
+    cmt.creatTree();
+    cmt.addLeaf(u1);
+    cmt.addLeaf(u2);  
+    cmt.addLeaf(u3);
+    cmt.addLeaf(u4);   
+    cmt.addLeaf(u5);
+    cmt.addLeaf(u6);  
+    cmt.addLeaf(u7);
+    cmt.addLeaf(u8); 
+    cmt.addLeaf(u9);
+    cmt.addLeaf(u10);  
+    cmt.addLeaf(u11);
+    cmt.addLeaf(u12);   
+    cmt.addLeaf(u13);
+    cmt.addLeaf(u14);  
+    cmt.addLeaf(u15);
+    cmt.addLeaf(u16); 
+    mp=cmt.getPath(u3);
+    return mp;
+}
+
+
+static std::string EncodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData )  
+{
+    if (strPemFileName.empty() || strData.empty())  
+    {  
+        assert(false);  
+        return "";  
+    }  
+    FILE* hPubKeyFile = fopen(strPemFileName.c_str(), "rb");  
+    if( hPubKeyFile == NULL )  
+    {  
+        assert(false);  
+        return "";   
+    }  
+    std::string strRet;  
+    RSA* pRSAPublicKey = RSA_new();  
+    if(PEM_read_RSA_PUBKEY(hPubKeyFile, &pRSAPublicKey, 0, 0) == NULL)  
+    {  
+        assert(false);  
+        return "";  
+    }  
+  
+    int nLen = RSA_size(pRSAPublicKey);  
+    char* pEncode = new char[nLen + 1];  
+    int ret = RSA_public_encrypt(strData.length(), (const unsigned char*)strData.c_str(), (unsigned char*)pEncode, pRSAPublicKey, RSA_PKCS1_PADDING);  
+    if (ret >= 0)  
+    {  
+        strRet = std::string(pEncode, ret);  
+    }  
+    delete[] pEncode;  
+    RSA_free(pRSAPublicKey);  
+    fclose(hPubKeyFile);  
+    CRYPTO_cleanup_all_ex_data();   
+    return strRet;  
+}  
+//MerkleTreePath getMerkleTreePath_apk_s(uint256 ask_s, uint256 apk_r);
+
+//MerkleTreePath getMerkleTreePath_apk_r(uint256 apk_r);
+
+//MerkleTreePath getMerkleTreePath(uint256 ask_s,uint64_t v_1,uint256 old_r);
+
+//MerkleTreePath getMerkleTreePath_lb(uint256 ask_s,uint64_t v1,uint64_t v2,uint256 old_r);
 
 template<typename FieldT>
 class tree_gadget : public libsnark::gadget<FieldT> {
@@ -1659,14 +2027,7 @@ typedef struct transferOne{
      uint256 r_rt;;
 }tr;
 
-extern char g_c[45];
-extern char sk[11];    
-extern FieldT g;
-extern FieldT Gsk;//私钥
-extern FieldT Gpk;
-extern uint256 z;
-extern uint256 Spk;  
-extern int64_t n;
+
 
 template<typename FieldT>
    transferOne test_js_z( uint256 apk_r, uint256 old_r,uint256 new_r,uint64_t v_1,uint256 ask_s)   
@@ -2175,7 +2536,7 @@ transferZero test_js_l(uint256 apk_r/*接收方公钥*/,uint256 new_r1/*新随�
 }
 
 //加密
-std::string EncodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData );
+//std::string EncodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData );
   
 //解密
 std::string DecodeRSAKeyFile( const std::string& strPemFileName, const std::string& strData );

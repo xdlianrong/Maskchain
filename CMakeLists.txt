@@ -50,10 +50,10 @@ HunterGate(
 project(aleth)
 set(PROJECT_VERSION 1.4.0)
 
-INCLUDE_DIRECTORIES("./libsnark/donator2" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
+#INCLUDE_DIRECTORIES("./libsnark/donator2" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
 #INCLUDE_DIRECTORIES("./libsnark/libff-n" "./libsnark/libsnark/src" "./libsnark/libsnark/third_party" "./libsnark/libff/src" "./libsnark/libff/third_party" "./libsnark/libfqfft/src" "./libsnark/zcash_w/src")
-LINK_DIRECTORIES("./libsnark/build" "./libsnark/libsnark/build" "./libsnark/libsnark/build/src" "./libsnark/libsnark/build/third_party" "./libsnark/libff/build/src" "./libsnark/zcash_w/build")
-LINK_DIRECTORIES("/usr/local/lib")
+#LINK_DIRECTORIES("./libsnark/build" "./libsnark/libsnark/build" "./libsnark/libsnark/build/src" "./libsnark/libsnark/build/third_party" "./libsnark/libff/build/src" "./libsnark/zcash_w/build")
+#LINK_DIRECTORIES("/usr/local/lib")
 
 
 #if (NOT EXISTS ${CMAKE_SOURCE_DIR}/evmjit/.git)
@@ -75,7 +75,7 @@ include(EthUtils)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
-hunter_add_package(Boost COMPONENTS program_options filesystem system thread context fiber log)
+hunter_add_package(Boost COMPONENTS test program_options filesystem system thread context fiber log)
 find_package(Boost CONFIG REQUIRED program_options filesystem system thread context fiber log)
 
 hunter_add_package(jsoncpp)
@@ -98,6 +98,8 @@ find_package(ethash CONFIG REQUIRED)
 
 include(ProjectSecp256k1)
 include(ProjectLibFF)
+include(ProjectLibSnark)
+include (ProjectLibFqfft)
 
 find_package(Threads)
 
@@ -122,6 +124,15 @@ endif()
 
 #Global include path for all libs.
 include_directories("${CMAKE_SOURCE_DIR}")
+include_directories("${CMAKE_BINARY_DIR}/deps/include")
+
+find_library(GMP NAMES ${CMAKE_STATIC_LIBRARY_PREFIx}gmp${CMAKE_STATIC_LIBRARY_SUFFIX})
+find_library(GMPXX NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}gmpxx${CMAKE_STATIC_LIBRARY_SUFFIX})
+find_library(BITCOIN_CRYPTO NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}bitcoin_crypto${CMAKE_STATIC_LIBRARY_SUFFIX})
+find_library(BITCOIN_UTIL NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}bitcoin_util${CMAKE_STATIC_LIBRARY_SUFFIX})
+find_library(BITCOIN_COMMON NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}bitcoin_common${CMAKE_STATIC_LIBRARY_SUFFIX})
+find_library(BITCOIN_ZMQ NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}bitcoin_zmq${CMAKE_STATIC_LIBRARY_SUFFIX})
+find_library(SNARK NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}snark${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 option(ALETH_INTERPRETER_SHARED "Build aleth-interpreter as a shared library" OFF)
 add_subdirectory(libaleth-interpreter)
@@ -144,7 +155,7 @@ add_subdirectory(libweb3jsonrpc)
 if (EVMJIT)
     add_subdirectory(evmjit)
 endif()
-
+add_subdirectory(libmsksnark)
 add_subdirectory(aleth)
 
 if (TOOLS)
@@ -153,10 +164,10 @@ if (TOOLS)
     add_subdirectory(rlp)
 endif()
 
-if (TESTS)
-    enable_testing()
-    add_subdirectory(test)
-endif()
+#if (TESTS)
+#    enable_testing()
+#    add_subdirectory(test)
+#endif()
 
 
 install(FILES ${PROJECT_BINARY_DIR}/aleth/buildinfo.json DESTINATION ${CMAKE_INSTALL_DATADIR}/aleth)

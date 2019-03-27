@@ -24,7 +24,7 @@
 
 #include <boost/optional.hpp>
 
-#include "libsnark/donator2/interface.h"
+#include "libmsksnark/interface.h"
 
 
 
