@@ -27,6 +27,10 @@
 
 #include <json/json.h>
 #include <boost/timer.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"/*引用来自donator2同级别的libsnark*/
+#include "libmsksnark/interface.h"
 
 #include <numeric>
 
@@ -275,6 +279,12 @@ void Executive::initialize(Transaction const& _transaction)
             BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (dev::bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
         }
         m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
+
+        //*************MARSCAT
+        //std::cout<<"maskashMsg:"<<std::endl<<m_t.maskashMsg<<std::endl<<"------------"<<std::endl;
+        m_mskVerifier.strTxToStructTx(m_t.maskashMsg());
+        
+
     }
 }
 

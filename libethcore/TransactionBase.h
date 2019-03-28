@@ -208,7 +208,7 @@ protected:
 	u256 m_gas;							///< The total gas to convert, paid for from sender's account. Any unused gas gets refunded once the contract is ended.
 	bytes m_data;						///< The data associated with the transaction, or the initialiser if it's a creation transaction.
 
-	std::string mskTxTmp;				// Maskash marsCatXdu Maskash交易信息的临时字符串
+	//std::string mskTxTmp;				// Maskash marsCatXdu Maskash交易信息的临时字符串
 	std::string m_maskashMsg;		// Maskash marsCatXdu 新增字符串字段
 
 	boost::optional<SignatureStruct> m_vrs;	///< The signature of the transaction. Encodes the sender.

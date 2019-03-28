@@ -23,9 +23,147 @@
 #include <json/json.h>
 #include <functional>
 
+#include <iostream>
+#include <string>
+#include <stdio.h>
+#include <ostream>
+#include <fstream>
+
 namespace Json
 {
     class Value;
+}
+
+namespace msk
+{
+class mskVerifier {
+public:
+    mskVerifier() {}
+
+    mskVerifier(std::string mskTxS) {
+        strTxToStructTx(mskTxS);
+    }
+
+    void strTxToStructTx(std::string mskTxS) {
+        if(mskTxS[0]=='M') {       // txType+||+kmintS+||+dataS+||+SigpubS
+            mskTxS = mskTxS.substr(3);
+            std::string kmintS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string dataS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string SigpubS = mskTxS.substr(0, mskTxS.length());
+            this->m_msgMint.kmint = uint256S(kmintS);
+            for(int i=0; i<192; i++) {
+                int tmp = boost::lexical_cast<int>(dataS[i]);
+                m_msgMint.data[i] = intToUsgnChar(tmp);
+            }
+            this->m_msgMint.Sigpub = SigpubS;
+            
+        } else if(mskTxS[0]=='Z') { // txType+||+SNoldS+||+krnewS +||+ksnewS +||+proofS +||+dataS +||+\
+                                        vkS +||+c_rtS +||+s_rtS+||+r_rtS;
+            mskTxS = mskTxS.substr(3);
+            std::string SNoldS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string krnewS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string ksnewS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string proofS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string dataS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string vkS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string c_rtS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string s_rtS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string r_rtS = mskTxS.substr(0, mskTxS.length());
+
+            this->m_transferZero.SNold = uint256S(SNoldS);
+            this->m_transferZero.krnew = uint256S(krnewS);
+            this->m_transferZero.ksnew = uint256S(ksnewS);
+            this->m_transferZero.pi = stringToProof(proofS);
+            for(int i=0; i<192; i++) {
+                int tmp = boost::lexical_cast<int>(dataS[i]);
+                m_transferZero.data[i] = intToUsgnChar(tmp);
+            }
+            this->m_transferZero.vk = stringToVerifyKey(vkS);
+            this->m_transferZero.c_rt = uint256S(c_rtS);
+            this->m_transferZero.s_rt = uint256S(s_rtS);
+            this->m_transferZero.r_rt = uint256S(r_rtS);
+            
+            transferZeroVerify<libsnark::default_r1cs_ppzksnark_pp::Fp_type>(this->m_transferZero.SNold, this->m_transferZero.krnew,\
+                                       this->m_transferZero.ksnew, this->m_transferZero.data,\
+                                       this->m_transferZero.pi, this->m_transferZero.vk, \
+                                       this->m_transferZero.c_rt, this->m_transferZero.s_rt, this->m_transferZero.r_rt);
+
+        } else if(mskTxS[0]=='O') { //txType+||+SNoldS+||+krnewS +||+proofS +||+dataS +||+\
+                                       vkS +||+c_rtS +||+s_rtS+||+r_rtS;
+            mskTxS = mskTxS.substr(3);
+            std::string SNoldS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string krnewS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string proofS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string dataS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string vkS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string c_rtS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string s_rtS = mskTxS.substr(0, mskTxS.find("||", 0));
+            mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
+            std::string r_rtS = mskTxS.substr(0, mskTxS.length());
+
+            this->m_transferOne.SNold = uint256S(SNoldS);
+            this->m_transferOne.krnew = uint256S(krnewS);
+            this->m_transferOne.pi = stringToProof(proofS);
+            for(int i=0; i<192; i++) {
+                int tmp = boost::lexical_cast<int>(dataS[i]);
+                m_transferOne.data[i] = intToUsgnChar(tmp);
+            }
+            this->m_transferOne.vk = stringToVerifyKey(vkS);
+            this->m_transferOne.c_rt = uint256S(c_rtS);
+            this->m_transferOne.s_rt = uint256S(s_rtS);
+            this->m_transferOne.r_rt = uint256S(r_rtS);
+        }
+    }
+
+    int usgnCharToInt(unsigned char _uc) {
+        int tmp = _uc;
+        return tmp;
+    }
+
+    unsigned char intToUsgnChar(int _int) {
+        unsigned char tmp;
+        tmp = _int;
+        return tmp;
+    }
+
+    libsnark::r1cs_ppzksnark_proof<libsnark::default_r1cs_ppzksnark_pp> stringToProof(std::string proofS) {
+        libsnark::r1cs_ppzksnark_proof<libsnark::default_r1cs_ppzksnark_pp> tmpProof;
+        std::stringstream ss("");
+        ss<<proofS;
+        ss>>tmpProof;
+        return tmpProof;
+    }
+
+    libsnark::r1cs_ppzksnark_verification_key<libsnark::default_r1cs_ppzksnark_pp> stringToVerifyKey(std::string vkS) {
+        libsnark::r1cs_ppzksnark_verification_key<libsnark::default_r1cs_ppzksnark_pp> tmpVk;
+        std::stringstream ss("");
+        ss<<vkS;
+        ss>>tmpVk;
+        return tmpVk;
+    }
+
+private:
+    msgMint m_msgMint;
+    transferZero m_transferZero;
+    transferOne m_transferOne;
+};
+
 }
 
 namespace dev
@@ -216,7 +354,10 @@ private:
     Logger m_execLogger{createLogger(VerbosityDebug, "exec")};
     Logger m_detailsLogger{createLogger(VerbosityTrace, "exec")};
     Logger m_vmTraceLogger{createLogger(VerbosityTrace, "vmtrace")};
+
+    msk::mskVerifier m_mskVerifier;
 };
 
 }
 }
+
