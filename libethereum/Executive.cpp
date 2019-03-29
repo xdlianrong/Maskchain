@@ -26,6 +26,11 @@
 #include <libevm/VMFactory.h>
 
 #include <json/json.h>
+
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -282,6 +287,8 @@ void Executive::initialize(Transaction const& _transaction)
 
         //*************MARSCAT
         //std::cout<<"maskashMsg:"<<std::endl<<m_t.maskashMsg<<std::endl<<"------------"<<std::endl;
+        //std::string tmpstr=m_t.maskashMsg();
+        //std::cout<<"\n\n\n\n\nFLAG  01\n\n\n\n\n\n\n\n\n\ntmpstr[tmpstr.lengtth()-1]:"<<tmpstr.substr(0, tmpstr.length())<<"\n\n\n\n\n\n\n\n\n\n";
         m_mskVerifier.strTxToStructTx(m_t.maskashMsg());
         
 

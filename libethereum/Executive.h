@@ -14,6 +14,12 @@
 
 #pragma once
 
+#include <boost/lexical_cast.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/algorithm/string.hpp>
+
 #include "Transaction.h"
 
 #include <libdevcore/Log.h>
@@ -28,6 +34,9 @@
 #include <stdio.h>
 #include <ostream>
 #include <fstream>
+#include <sstream>
+#include <signal.h>
+#include <stdlib.h>
 
 namespace Json
 {
@@ -40,11 +49,48 @@ class mskVerifier {
 public:
     mskVerifier() {}
 
-    mskVerifier(std::string mskTxS) {
+    mskVerifier(std::string _mskTxS) {
+        std::string mskTxS;
+        int decodeStatus = Base64Decode(_mskTxS, &mskTxS);
+        std::cout<<"\n\n\n\n\nFLAG  666\n\n\n\n\n\n\n\n\n";
+        if(decodeStatus==0) {std::cout<<"\n\n-----FAILED : MSKMSG DECODE-----\n\n";}
+        std::cout<<mskTxS;
+        //std::cout<<"Decode Status:"<<Base64Decode(_mskTxS, &mskTxS)<<"\n"<<"Decoded:\n"<<mskTxS<<std::endl;
         strTxToStructTx(mskTxS);
     }
 
-    void strTxToStructTx(std::string mskTxS) {
+    std::string exec(const char* cmd) {
+        FILE* pipe = popen(cmd, "r");
+        if (!pipe) return "ERROR";
+        char buffer[128];
+        std::string result = "";
+        while(!feof(pipe)) {
+            if(fgets(buffer, 128, pipe) != NULL)
+            result += buffer;
+        }
+        pclose(pipe);
+        return result;
+    }
+
+    bool Base64Decode( const std::string & input, std::string * output ) {
+        typedef boost::archive::iterators::transform_width<boost::archive::iterators::binary_from_base64<std::string::const_iterator>, 8, 6> Base64DecodeIterator;
+        std::stringstream result;
+        try {
+            copy( Base64DecodeIterator( input.begin() ), Base64DecodeIterator( input.end() ), std::ostream_iterator<char>( result ) );
+        } catch ( ... ) {
+            return false;
+        }
+        *output = result.str();
+        return output->empty() == false;
+    }
+
+    void strTxToStructTx(std::string _mskTxS) {
+        std::string mskTxS;
+        int decodeStatus = Base64Decode(_mskTxS, &mskTxS);
+        std::cout<<"\n\n\n\n\nFLAG  666\n\n\n\n\n\n\n\n\n";
+        if(decodeStatus==0) {std::cout<<"\n\n-----FAILED : MSKMSG DECODE-----\n\n";}
+        std::cout<<mskTxS;
+
         if(mskTxS[0]=='M') {       // txType+||+kmintS+||+dataS+||+SigpubS
             mskTxS = mskTxS.substr(3);
             std::string kmintS = mskTxS.substr(0, mskTxS.find("||", 0));
@@ -128,6 +174,8 @@ public:
             this->m_transferOne.c_rt = uint256S(c_rtS);
             this->m_transferOne.s_rt = uint256S(s_rtS);
             this->m_transferOne.r_rt = uint256S(r_rtS);
+        } else {
+            std::cout<<"\n FAILED!!  strTxToStructTx and Verify \n";
         }
     }
 
