@@ -52,11 +52,12 @@ public:
     mskVerifier(std::string _mskTxS) {
         std::string mskTxS;
         int decodeStatus = Base64Decode(_mskTxS, &mskTxS);
-        std::cout<<"\n\n\n\n\nFLAG  666\n\n\n\n\n\n\n\n\n";
         if(decodeStatus==0) {std::cout<<"\n\n-----FAILED : MSKMSG DECODE-----\n\n";}
-        std::cout<<mskTxS;
-        //std::cout<<"Decode Status:"<<Base64Decode(_mskTxS, &mskTxS)<<"\n"<<"Decoded:\n"<<mskTxS<<std::endl;
-        strTxToStructTx(mskTxS);
+        bool verifyStatus = strTxToStructTx(mskTxS);
+    }
+
+    ~mskVerifier() {
+        std::cout<<std::endl<<"mskVerifier Deconstructed"<<std::endl;
     }
 
     std::string exec(const char* cmd) {
@@ -84,12 +85,12 @@ public:
         return output->empty() == false;
     }
 
-    void strTxToStructTx(std::string _mskTxS) {
+    bool strTxToStructTx(std::string _mskTxS) {
         std::string mskTxS;
         int decodeStatus = Base64Decode(_mskTxS, &mskTxS);
-        std::cout<<"\n\n\n\n\nFLAG  666\n\n\n\n\n\n\n\n\n";
+        //std::cout<<"\n\n\n\n\nFLAG  666\n\n\n\n\n\n\n\n\n";
         if(decodeStatus==0) {std::cout<<"\n\n-----FAILED : MSKMSG DECODE-----\n\n";}
-        std::cout<<mskTxS;
+        //std::cout<<mskTxS;
 
         if(mskTxS[0]=='M') {       // txType+||+kmintS+||+dataS+||+SigpubS
             mskTxS = mskTxS.substr(3);
@@ -104,7 +105,8 @@ public:
                 m_msgMint.data[i] = intToUsgnChar(tmp);
             }
             this->m_msgMint.Sigpub = SigpubS;
-            
+            // DEBUGGING!!!
+            return 1;
         } else if(mskTxS[0]=='Z') { // txType+||+SNoldS+||+krnewS +||+ksnewS +||+proofS +||+dataS +||+\
                                         vkS +||+c_rtS +||+s_rtS+||+r_rtS;
             mskTxS = mskTxS.substr(3);
@@ -125,7 +127,95 @@ public:
             std::string s_rtS = mskTxS.substr(0, mskTxS.find("||", 0));
             mskTxS = mskTxS.substr(mskTxS.find("||", 0)+2);
             std::string r_rtS = mskTxS.substr(0, mskTxS.length());
+/*
+//==============================================================================
+            std::fstream file; // 定义fstream对象
+            file.open("./executiveSNold", std::ios::out); // 打开文件，并绑定到ios::out对象
+            //string line;
+            // 先获取cout、cin的buffer指针
+            std::streambuf *stream_buffer_cout = std::cout.rdbuf();
+            // 获取文件的buffer指针
+            std::streambuf *stream_buffer_file = file.rdbuf();
+            // cout重定向到文件
+            std::cout.rdbuf(stream_buffer_file);
+            std::cout<<SNoldS;
+            // cout重定向到cout，即输出到屏幕
+            std::cout.rdbuf(stream_buffer_cout);
+            file.close(); // 关闭文件
 
+            std::fstream file2; // 定义fstream对象
+            file2.open("./executiveKrnew", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout2 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file2 = file2.rdbuf();
+            std::cout.rdbuf(stream_buffer_file2);
+            std::cout<<krnewS;
+            std::cout.rdbuf(stream_buffer_cout2);
+            file2.close(); // 关闭文件
+
+            std::fstream file3; // 定义fstream对象
+            file3.open("./executiveKsnew", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout3 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file3 = file3.rdbuf();
+            std::cout.rdbuf(stream_buffer_file3);
+            std::cout<<ksnewS;
+            std::cout.rdbuf(stream_buffer_cout3);
+            file3.close(); // 关闭文件
+
+            std::fstream file4; // 定义fstream对象
+            file4.open("./executivepi", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout4 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file4 = file4.rdbuf();
+            std::cout.rdbuf(stream_buffer_file4);
+            std::cout<<proofS;
+            std::cout.rdbuf(stream_buffer_cout4);
+            file4.close(); // 关闭文件
+
+            std::fstream file5; // 定义fstream对象
+            file5.open("./executiveData", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout5 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file5 = file5.rdbuf();
+            std::cout.rdbuf(stream_buffer_file5);
+            std::cout<<dataS;
+            std::cout.rdbuf(stream_buffer_cout5);
+            file5.close(); // 关闭文件
+
+            std::fstream file6; // 定义fstream对象
+            file6.open("./executiveVk", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout6 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file6 = file6.rdbuf();
+            std::cout.rdbuf(stream_buffer_file6);
+            std::cout<<vkS;
+            std::cout.rdbuf(stream_buffer_cout6);
+            file6.close(); // 关闭文件
+
+            std::fstream file7; // 定义fstream对象
+            file7.open("./executiveC", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout7 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file7 = file7.rdbuf();
+            std::cout.rdbuf(stream_buffer_file7);
+            std::cout<<c_rtS;
+            std::cout.rdbuf(stream_buffer_cout7);
+            file7.close(); // 关闭文件
+
+            std::fstream file8; // 定义fstream对象
+            file8.open("./executiveS", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout8 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file8 = file8.rdbuf();
+            std::cout.rdbuf(stream_buffer_file8);
+            std::cout<<s_rtS;
+            std::cout.rdbuf(stream_buffer_cout8);
+            file8.close(); // 关闭文件
+
+            std::fstream file9; // 定义fstream对象
+            file9.open("./executiveR", std::ios::out); // 打开文件，并绑定到ios::out对象
+            std::streambuf *stream_buffer_cout9 = std::cout.rdbuf();
+            std::streambuf *stream_buffer_file9 = file9.rdbuf();
+            std::cout.rdbuf(stream_buffer_file9);
+            std::cout<<r_rtS;
+            std::cout.rdbuf(stream_buffer_cout9);
+            file9.close(); // 关闭文件
+//=============================================================================
+*/
             this->m_transferZero.SNold = uint256S(SNoldS);
             this->m_transferZero.krnew = uint256S(krnewS);
             this->m_transferZero.ksnew = uint256S(ksnewS);
@@ -138,11 +228,12 @@ public:
             this->m_transferZero.c_rt = uint256S(c_rtS);
             this->m_transferZero.s_rt = uint256S(s_rtS);
             this->m_transferZero.r_rt = uint256S(r_rtS);
-            
-            transferZeroVerify<libsnark::default_r1cs_ppzksnark_pp::Fp_type>(this->m_transferZero.SNold, this->m_transferZero.krnew,\
-                                       this->m_transferZero.ksnew, this->m_transferZero.data,\
-                                       this->m_transferZero.pi, this->m_transferZero.vk, \
-                                       this->m_transferZero.c_rt, this->m_transferZero.s_rt, this->m_transferZero.r_rt);
+
+            return transferZeroVerify<libsnark::default_r1cs_ppzksnark_pp::Fp_type>(this->m_transferZero.SNold,\
+                                        this->m_transferZero.krnew,\
+                                        this->m_transferZero.ksnew, this->m_transferZero.data,\
+                                        this->m_transferZero.pi, this->m_transferZero.vk, \
+                                        this->m_transferZero.c_rt, this->m_transferZero.s_rt, this->m_transferZero.r_rt);
 
         } else if(mskTxS[0]=='O') { //txType+||+SNoldS+||+krnewS +||+proofS +||+dataS +||+\
                                        vkS +||+c_rtS +||+s_rtS+||+r_rtS;
@@ -174,8 +265,11 @@ public:
             this->m_transferOne.c_rt = uint256S(c_rtS);
             this->m_transferOne.s_rt = uint256S(s_rtS);
             this->m_transferOne.r_rt = uint256S(r_rtS);
+            //DEBUG!!!!!
+            return 1;
         } else {
             std::cout<<"\n FAILED!!  strTxToStructTx and Verify \n";
+            return 0;
         }
     }
 
@@ -403,7 +497,7 @@ private:
     Logger m_detailsLogger{createLogger(VerbosityTrace, "exec")};
     Logger m_vmTraceLogger{createLogger(VerbosityTrace, "vmtrace")};
 
-    msk::mskVerifier m_mskVerifier;
+    //msk::mskVerifier m_mskVerifier;  make it temporary
 };
 
 }

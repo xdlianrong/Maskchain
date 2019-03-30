@@ -207,7 +207,7 @@ int main(int argc, char** argv)
 {
     setDefaultOrCLocale();
 
-    // isSnarkOk();
+    //isSnarkOk();
     
     // Init secp256k1 context by calling one of the functions.
     toPublic({});
@@ -1145,7 +1145,7 @@ int main(int argc, char** argv)
         cout << "JSONRPC Admin Session Key: " << jsonAdmin << "\n";
     }
 
-    // isSnarkOk();
+    //isSnarkOk();
 
     for (auto const& p: preferredNodes)
         if (p.second.second)

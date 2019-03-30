@@ -289,8 +289,16 @@ void Executive::initialize(Transaction const& _transaction)
         //std::cout<<"maskashMsg:"<<std::endl<<m_t.maskashMsg<<std::endl<<"------------"<<std::endl;
         //std::string tmpstr=m_t.maskashMsg();
         //std::cout<<"\n\n\n\n\nFLAG  01\n\n\n\n\n\n\n\n\n\ntmpstr[tmpstr.lengtth()-1]:"<<tmpstr.substr(0, tmpstr.length())<<"\n\n\n\n\n\n\n\n\n\n";
-        m_mskVerifier.strTxToStructTx(m_t.maskashMsg());
-        
+
+        msk::mskVerifier m_mskVerifier;
+        bool mskVrifiyStatus = m_mskVerifier.strTxToStructTx(m_t.maskashMsg());
+
+        if (mskVrifiyStatus == 0)
+        {
+            std::cout<<"Maskash verify failed!"<<std::endl;
+            m_excepted = TransactionException::InvalidMaskashTx;
+            BOOST_THROW_EXCEPTION(NotEnoughCash());
+        }
 
     }
 }
