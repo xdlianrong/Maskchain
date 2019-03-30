@@ -107,3 +107,8 @@ DEV_SIMPLE_EXCEPTION(TransactionRefused);
 DEV_SIMPLE_EXCEPTION(UnknownAccount);
 }
 }
+
+namespace msk
+{
+MSK_SIMPLE_EXCEPTION(MaskashVerifyFailed);
+}

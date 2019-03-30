@@ -296,8 +296,8 @@ void Executive::initialize(Transaction const& _transaction)
         if (mskVrifiyStatus == 0)
         {
             std::cout<<"Maskash verify failed!"<<std::endl;
-            m_excepted = TransactionException::InvalidMaskashTx;
-            BOOST_THROW_EXCEPTION(NotEnoughCash());
+            m_excepted = TransactionException::MaskashVerifyFailed;
+            BOOST_THROW_EXCEPTION(msk::MaskashVerifyFailed());
         }
 
     }

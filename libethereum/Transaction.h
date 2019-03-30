@@ -52,7 +52,7 @@ enum class TransactionException
 	RevertInstruction,
 	InvalidZeroSignatureFormat,
 	AddressAlreadyUsed,
-	InvalidMaskashTx		///< marsCatXdu Maskash tx， 18
+	MaskashVerifyFailed		///< marsCatXdu Maskash tx， 18
 };
 
 enum class CodeDeposit

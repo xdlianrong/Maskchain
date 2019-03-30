@@ -2022,9 +2022,9 @@ typedef struct transferOne{
      //unsigned char *data;/*加密数据*/
      unsigned char data[32*6];/*加密数据*/
      libsnark::r1cs_ppzksnark_verification_key<ppT> vk;
-     uint256 c_rt;
-     uint256 s_rt;
-     uint256 r_rt;;
+     uint256 c_rt;  // 承诺rt
+     uint256 s_rt;  // 发送者的公钥树根
+     uint256 r_rt;; // 接收者的公钥树根
 }tr;
 
 
@@ -2036,7 +2036,7 @@ template<typename FieldT>
     uint256 apk_s=prf(ask_s);
 
     uint256 old_comm=cm(apk_s,v_1,old_r);
-    uint256 new_comm=cm(apk_r,v_1,new_r);
+    uint256 new_comm=cm(apk_r,v_1,new_r);           // 一个币的承诺，由这个币的持有者公钥、币的币值、这个币的【上一个持有者为当前持有者产生的】随机数经过运算构成。
 
     uint256 old_sn=sn(ask_s,old_r);
 
@@ -2667,11 +2667,11 @@ bool transferZeroVerify(uint256 SNold ,uint256 krnew,uint256 ksnew,  unsigned ch
 
     //auto pi_v = pb.primary_input();
     if(libsnark::r1cs_ppzksnark_verifier_strong_IC<ppT>(vk,pi_v,pr)) {
-        std::cout << "Verified!" << std::endl;
+        std::cout << "\n\n============ Maskash Verified! ============\n\n" << std::endl;
         return 1;
     } 
     else {
-        std::cout << "Failed to verify!" << std::endl;
+        std::cout << "\n\n============ Failed to verify! ============\n\n" << std::endl;
         return 0;
     }
 }
@@ -2752,11 +2752,11 @@ bool transferOneVerify(uint256 SNold,uint256 krnew, uint256 cm_rt,uint256 apk_s_
 
     //auto pi_v = pb.primary_input();
     if(libsnark::r1cs_ppzksnark_verifier_strong_IC<ppT>(vk,pi_v,pr)) {
-      std::cout<<"Verified!"<<std::endl;
+      std::cout<<"\n\n============ Maskash Verified! ============\n\n"<<std::endl;
       return 1;
     } 
     else {
-      std::cout<<"Failed to verify!"<<std::endl;
+      std::cout<<"\n\n============ Failed to verify! ============\n\n"<<std::endl;
       return 0;
     }
 };
