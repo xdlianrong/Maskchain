@@ -24,6 +24,7 @@
 #include <fstream>
 #include <cstdint>
 
+// 注意空间
 using ppT = libsnark::default_r1cs_ppzksnark_pp; 
 using FieldT = ppT::Fp_type;
 
