@@ -56,7 +56,6 @@ TransactionBase::TransactionBase(TransactionSkeleton const& _ts, Secret const& _
 	m_maskashMsg(_ts.maskashMsg),
 	m_sender(_ts.from)
 {
-	//msk::isSnarkOk();
 	if (_s)
 		sign(_s);
 }
