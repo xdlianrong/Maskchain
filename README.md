@@ -15,3 +15,5 @@
 5. $make
 6. $make check
 7. $sudo make install
+
+### 该项目当前仍处于开发阶段，更多文档将逐渐添加
