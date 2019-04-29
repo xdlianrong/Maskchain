@@ -324,9 +324,9 @@ int main(int argc, char** argv)
     executive.setResultRecipient(res);
     t.forceSender(sender);
 
-    unordered_map<byte, pair<unsigned, bigint>> counts;
+    unordered_map<byte, pair<unsigned, dev::bigint>> counts;
     unsigned total = 0;
-    bigint memTotal;
+    dev::bigint memTotal;
 
     executive.initialize(t);
     if (!code.empty())
@@ -337,7 +337,7 @@ int main(int argc, char** argv)
     OnOpFunc onOp;
     if (mode == Mode::Statistics)
     {
-        onOp = [&](uint64_t, uint64_t, Instruction inst, bigint m, bigint gasCost, bigint,
+        onOp = [&](uint64_t, uint64_t, Instruction inst, dev::bigint m, dev::bigint gasCost, dev::bigint,
                    VMFace const*, ExtVMFace const*) {
             byte b = static_cast<byte>(inst);
             counts[b].first++;

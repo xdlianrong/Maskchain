@@ -54,7 +54,7 @@ int64_t utcTime()
     return time(0);
 }
 
-string inUnits(bigint const& _b, strings const& _units)
+string inUnits(dev::bigint const& _b, strings const& _units)
 {
     ostringstream ret;
     u256 b;

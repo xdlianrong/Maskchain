@@ -38,22 +38,22 @@ void SealEngineFace::verify(Strictness _s, BlockHeader const& _bi, BlockHeader c
         if (_bi.difficulty() < chainParams().minimumDifficulty)
             BOOST_THROW_EXCEPTION(
                         InvalidDifficulty() << RequirementError(
-                            bigint(chainParams().minimumDifficulty), bigint(_bi.difficulty())));
+                            dev::bigint(chainParams().minimumDifficulty), dev::bigint(_bi.difficulty())));
 
         if (_bi.gasLimit() < chainParams().minGasLimit)
             BOOST_THROW_EXCEPTION(InvalidGasLimit() << RequirementError(
-                                      bigint(chainParams().minGasLimit), bigint(_bi.gasLimit())));
+                                      dev::bigint(chainParams().minGasLimit), dev::bigint(_bi.gasLimit())));
 
         if (_bi.gasLimit() > chainParams().maxGasLimit)
             BOOST_THROW_EXCEPTION(InvalidGasLimit() << RequirementError(
-                                      bigint(chainParams().maxGasLimit), bigint(_bi.gasLimit())));
+                                      dev::bigint(chainParams().maxGasLimit), dev::bigint(_bi.gasLimit())));
 
         if (_bi.number() && _bi.extraData().size() > chainParams().maximumExtraDataSize)
         {
             BOOST_THROW_EXCEPTION(
                         ExtraDataTooBig()
-                        << RequirementError(bigint(chainParams().maximumExtraDataSize),
-                                            bigint(_bi.extraData().size()))
+                        << RequirementError(dev::bigint(chainParams().maximumExtraDataSize),
+                                            dev::bigint(_bi.extraData().size()))
                         << errinfo_extraData(_bi.extraData()));
         }
 
@@ -76,10 +76,10 @@ void SealEngineFace::verify(Strictness _s, BlockHeader const& _bi, BlockHeader c
             BOOST_THROW_EXCEPTION(
                         InvalidGasLimit()
                         << errinfo_min(
-                            (bigint)((bigint)parentGasLimit -
-                                     (bigint)(parentGasLimit / chainParams().gasLimitBoundDivisor)))
-                        << errinfo_got((bigint)gasLimit)
-                        << errinfo_max((bigint)((bigint)parentGasLimit +
+                            (dev::bigint)((dev::bigint)parentGasLimit -
+                                     (dev::bigint)(parentGasLimit / chainParams().gasLimitBoundDivisor)))
+                        << errinfo_got((dev::bigint)gasLimit)
+                        << errinfo_max((dev::bigint)((dev::bigint)parentGasLimit +
                                                 parentGasLimit / chainParams().gasLimitBoundDivisor)));
     }
 }
@@ -106,7 +106,7 @@ void SealEngineFace::verifyTransaction(ImportRequirements::value _ir, Transactio
     if ((_ir & ImportRequirements::TransactionBasic) &&
         _header.number() >= chainParams().experimentalForkBlock && _t.hasZeroSignature() &&
         (_t.value() != 0 || _t.gasPrice() != 0 || _t.nonce() != 0))
-        BOOST_THROW_EXCEPTION(InvalidZeroSignatureTransaction() << errinfo_got((bigint)_t.gasPrice()) << errinfo_got((bigint)_t.value()) << errinfo_got((bigint)_t.nonce()));
+        BOOST_THROW_EXCEPTION(InvalidZeroSignatureTransaction() << errinfo_got((dev::bigint)_t.gasPrice()) << errinfo_got((dev::bigint)_t.value()) << errinfo_got((dev::bigint)_t.nonce()));
 
     if (_header.number() >= chainParams().homesteadForkBlock && (_ir & ImportRequirements::TransactionSignatures) && _t.hasSignature())
         _t.checkLowS();
@@ -116,16 +116,16 @@ void SealEngineFace::verifyTransaction(ImportRequirements::value _ir, Transactio
     // Pre calculate the gas needed for execution
     if ((_ir & ImportRequirements::TransactionBasic) && _t.baseGasRequired(schedule) > _t.gas())
         BOOST_THROW_EXCEPTION(OutOfGasIntrinsic() << RequirementError(
-                                  (bigint)(_t.baseGasRequired(schedule)), (bigint)_t.gas()));
+                                  (dev::bigint)(_t.baseGasRequired(schedule)), (dev::bigint)_t.gas()));
 /**
  * marsCatXdu Marked
  * 该处可能出现 gas 值计算的问题
 */
     // Avoid transactions that would take us beyond the block gas limit.
-    if (_gasUsed + (bigint)_t.gas() > _header.gasLimit())
+    if (_gasUsed + (dev::bigint)_t.gas() > _header.gasLimit())
         BOOST_THROW_EXCEPTION(BlockGasLimitReached() << RequirementErrorComment(
-                                  (bigint)(_header.gasLimit() - _gasUsed), (bigint)_t.gas(),
-                                  string("_gasUsed + (bigint)_t.gas() > _header.gasLimit()")));
+                                  (dev::bigint)(_header.gasLimit() - _gasUsed), (dev::bigint)_t.gas(),
+                                  string("_gasUsed + (dev::bigint)_t.gas() > _header.gasLimit()")));
 }
 
 SealEngineFace* SealEngineRegistrar::create(ChainOperationParams const& _params)

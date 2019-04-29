@@ -137,13 +137,13 @@ inline Logger createLogger(int _severity, std::string const& _channel)
 // non-const reference generic operator<<(formatting_ostream& _strm, T& _value) will be preferred by
 // overload resolution.
 inline boost::log::formatting_ostream& operator<<(
-    boost::log::formatting_ostream& _strm, bigint const& _value)
+    boost::log::formatting_ostream& _strm, dev::bigint const& _value)
 {
     _strm.stream() << EthNavy << _value << EthReset;
     return _strm;
 }
 inline boost::log::formatting_ostream& operator<<(
-    boost::log::formatting_ostream& _strm, bigint& _value)
+    boost::log::formatting_ostream& _strm, dev::bigint& _value)
 {
     auto const& constValue = _value;
     _strm << constValue;

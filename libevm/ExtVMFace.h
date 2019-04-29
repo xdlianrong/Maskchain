@@ -112,7 +112,7 @@ class ExtVMFace;
 class LastBlockHashesFace;
 class VMFace;
 
-using OnOpFunc = std::function<void(uint64_t /*steps*/, uint64_t /* PC */, Instruction /*instr*/, bigint /*newMemSize*/, bigint /*gasCost*/, bigint /*gas*/, VMFace const*, ExtVMFace const*)>;
+using OnOpFunc = std::function<void(uint64_t /*steps*/, uint64_t /* PC */, Instruction /*instr*/, dev::bigint /*newMemSize*/, dev::bigint /*gasCost*/, dev::bigint /*gas*/, VMFace const*, ExtVMFace const*)>;
 
 struct CallParameters
 {

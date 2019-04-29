@@ -65,18 +65,18 @@ void LegacyVM::throwDisallowedStateChange()
 // so the call to m_onFail is needed here
 void LegacyVM::throwBadStack(unsigned _removed, unsigned _added)
 {
-    bigint size = m_stackEnd - m_SPP;
+    dev::bigint size = m_stackEnd - m_SPP;
     if (size < _removed)
     {
         if (m_onFail)
             (this->*m_onFail)();
-        BOOST_THROW_EXCEPTION(StackUnderflow() << RequirementError((bigint)_removed, size));
+        BOOST_THROW_EXCEPTION(StackUnderflow() << RequirementError((dev::bigint)_removed, size));
     }
     else
     {
         if (m_onFail)
             (this->*m_onFail)();
-        BOOST_THROW_EXCEPTION(OutOfStack() << RequirementError((bigint)(_added - _removed), size));
+        BOOST_THROW_EXCEPTION(OutOfStack() << RequirementError((dev::bigint)(_added - _removed), size));
     }
 }
 
@@ -86,12 +86,12 @@ void LegacyVM::throwRevertInstruction(owning_bytes_ref&& _output)
     throw RevertInstruction(move(_output));
 }
 
-void LegacyVM::throwBufferOverrun(bigint const& _endOfAccess)
+void LegacyVM::throwBufferOverrun(dev::bigint const& _endOfAccess)
 {
     // todo: disable this m_onFail, may result in duplicate log step in the trace
     if (m_onFail)
         (this->*m_onFail)();
-    BOOST_THROW_EXCEPTION(BufferOverrun() << RequirementError(_endOfAccess, bigint(m_returnData.size())));
+    BOOST_THROW_EXCEPTION(BufferOverrun() << RequirementError(_endOfAccess, dev::bigint(m_returnData.size())));
 }
 
 int64_t LegacyVM::verifyJumpDest(u256 const& _dest, bool _throw)

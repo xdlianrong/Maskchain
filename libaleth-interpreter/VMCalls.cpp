@@ -64,11 +64,11 @@ void VM::throwDisallowedStateChange()
 // so the call to m_onFail is needed here
 void VM::throwBadStack(int _removed, int _added)
 {
-    bigint size = m_stackEnd - m_SPP;
+    dev::bigint size = m_stackEnd - m_SPP;
     if (size < _removed)
-        BOOST_THROW_EXCEPTION(StackUnderflow() << RequirementError((bigint)_removed, size));
+        BOOST_THROW_EXCEPTION(StackUnderflow() << RequirementError((dev::bigint)_removed, size));
     else
-        BOOST_THROW_EXCEPTION(OutOfStack() << RequirementError((bigint)(_added - _removed), size));
+        BOOST_THROW_EXCEPTION(OutOfStack() << RequirementError((dev::bigint)(_added - _removed), size));
 }
 
 void VM::throwRevertInstruction(owning_bytes_ref&& _output)
@@ -78,9 +78,9 @@ void VM::throwRevertInstruction(owning_bytes_ref&& _output)
     throw RevertInstruction(std::move(_output));
 }
 
-void VM::throwBufferOverrun(bigint const& _endOfAccess)
+void VM::throwBufferOverrun(dev::bigint const& _endOfAccess)
 {
-    BOOST_THROW_EXCEPTION(BufferOverrun() << RequirementError(_endOfAccess, bigint(m_returnData.size())));
+    BOOST_THROW_EXCEPTION(BufferOverrun() << RequirementError(_endOfAccess, dev::bigint(m_returnData.size())));
 }
 
 int64_t VM::verifyJumpDest(u256 const& _dest, bool _throw)

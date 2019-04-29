@@ -78,10 +78,10 @@ DEV_SIMPLE_EXCEPTION(ExternalFunctionFailure);
 using errinfo_invalidSymbol = boost::error_info<struct tag_invalidSymbol, char>;
 using errinfo_wrongAddress = boost::error_info<struct tag_address, std::string>;
 using errinfo_comment = boost::error_info<struct tag_comment, std::string>;
-using errinfo_required = boost::error_info<struct tag_required, bigint>;
-using errinfo_got = boost::error_info<struct tag_got, bigint>;
-using errinfo_min = boost::error_info<struct tag_min, bigint>;
-using errinfo_max = boost::error_info<struct tag_max, bigint>;
+using errinfo_required = boost::error_info<struct tag_required, dev::bigint>;
+using errinfo_got = boost::error_info<struct tag_got, dev::bigint>;
+using errinfo_min = boost::error_info<struct tag_min, dev::bigint>;
+using errinfo_max = boost::error_info<struct tag_max, dev::bigint>;
 using RequirementError = boost::tuple<errinfo_required, errinfo_got>;
 using RequirementErrorComment = boost::tuple<errinfo_required, errinfo_got, errinfo_comment>;
 using errinfo_hash256 = boost::error_info<struct tag_hash, h256>;
@@ -92,4 +92,13 @@ using errinfo_extraData = boost::error_info<struct tag_extraData, bytes>;
 using errinfo_externalFunction = boost::errinfo_api_function;
 using errinfo_interface = boost::error_info<struct tag_interface, std::string>;
 using errinfo_path = boost::error_info<struct tag_path, std::string>;
+}
+
+// 添加 Maskash 异常
+namespace msk
+{
+#define MSK_SIMPLE_EXCEPTION(X)  \
+    struct X : virtual dev::Exception \
+    {                            \
+    }
 }

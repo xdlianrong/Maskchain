@@ -79,3 +79,6 @@ node_modules/
 .vscode
 
 dependency_graph.svg
+
+zcash/
+data0

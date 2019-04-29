@@ -30,6 +30,9 @@
 
 namespace dev
 {
+
+// xdlrdev marscat 查询到的交易数据中包含的 0x 前缀应该就是这里加的，大概是不方便单独去除某一字段上面的吧
+
 inline std::string toJS(byte _b)
 {
     return "0x" + std::to_string(_b);

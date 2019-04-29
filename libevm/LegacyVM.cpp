@@ -1274,7 +1274,7 @@ void LegacyVM::interpretCases()
             ON_OP();
             if (!m_schedule->haveReturnData)
                 throwBadInstruction();
-            bigint const endOfAccess = bigint(m_SP[1]) + bigint(m_SP[2]);
+            dev::bigint const endOfAccess = dev::bigint(m_SP[1]) + dev::bigint(m_SP[2]);
             if (m_returnData.size() < endOfAccess)
                 throwBufferOverrun(endOfAccess);
 

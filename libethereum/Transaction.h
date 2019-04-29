@@ -51,7 +51,8 @@ enum class TransactionException
 	StackUnderflow,
 	RevertInstruction,
 	InvalidZeroSignatureFormat,
-	AddressAlreadyUsed
+	AddressAlreadyUsed,
+	MaskashVerifyFailed		///< marsCatXdu Maskash tx， 18
 };
 
 enum class CodeDeposit

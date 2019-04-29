@@ -347,8 +347,8 @@ pair<TransactionReceipts, bool> Block::sync(BlockChain const& _bc, TransactionQu
                 }
                 catch (InvalidNonce const& in)
                 {
-                    bigint const& req = *boost::get_error_info<errinfo_required>(in);
-                    bigint const& got = *boost::get_error_info<errinfo_got>(in);
+                    dev::bigint const& req = *boost::get_error_info<errinfo_required>(in);
+                    dev::bigint const& got = *boost::get_error_info<errinfo_got>(in);
 
                     if (req > got)
                     {
@@ -368,7 +368,7 @@ pair<TransactionReceipts, bool> Block::sync(BlockChain const& _bc, TransactionQu
                 }
                 catch (BlockGasLimitReached const& e)
                 {
-                    bigint const& got = *boost::get_error_info<errinfo_got>(e);
+                    dev::bigint const& got = *boost::get_error_info<errinfo_got>(e);
                     if (got > m_currentBlock.gasLimit())
                     {
                         LOG(m_logger)
@@ -583,7 +583,7 @@ u256 Block::enact(VerifiedBlockRef const& _block, BlockChain const& _bc)
                 // 5
                 // 6											7
                 //												(8 Invalid)
-                bigint depth = (bigint)m_currentBlock.number() - (bigint)uncle.number();
+                dev::bigint depth = (dev::bigint)m_currentBlock.number() - (dev::bigint)uncle.number();
                 if (depth > 6)
                 {
                     UncleTooOld ex;
@@ -649,7 +649,7 @@ u256 Block::enact(VerifiedBlockRef const& _block, BlockChain const& _bc)
     {
         // Rollback the trie.
         m_state.db().rollback();		// TODO: API in State for this?
-        BOOST_THROW_EXCEPTION(InvalidGasUsed() << RequirementError(bigint(m_currentBlock.gasUsed()), bigint(gasUsed())));
+        BOOST_THROW_EXCEPTION(InvalidGasUsed() << RequirementError(dev::bigint(m_currentBlock.gasUsed()), dev::bigint(gasUsed())));
     }
 
     return tdIncrease;

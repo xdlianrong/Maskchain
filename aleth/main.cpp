@@ -62,12 +62,24 @@
 
 #include <aleth/buildinfo.h>
 
+#include "libmsksnark/interface.h"
+
+using namespace msk;
 using namespace std;
 using namespace dev;
 using namespace dev::p2p;
 using namespace dev::eth;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
+
+
+using namespace libsnark;
+using namespace libff;
+
+
+using ppT = default_r1cs_ppzksnark_pp; 
+using FieldT = ppT::Fp_type;
+
 
 namespace
 {
@@ -134,6 +146,31 @@ enum class Format
     Human
 };
 
+void isSnarkOk() {
+    ppT::init_public_params();
+    //using FieldT = ppT::Fp_type;
+    inhibit_profiling_info = true;
+    inhibit_profiling_counters = true;
+
+    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+   
+    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
+
+    uint64_t v_1=5;
+    uint64_t v_2=3;
+    uint64_t v_3=0;
+
+    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
+
+    uint256 new_r1=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+    uint256 new_r2=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+
+    transferZero tr= makeTransferZero<FieldT>( apk_r, new_r1,new_r2,v_1,ask_s,old_r,v_2);
+
+    bool t=transferZeroVerify<FieldT>(tr.SNold, tr.krnew, tr.ksnew, tr.data,\
+                                     tr.pi, tr.vk, tr.c_rt, tr.s_rt, tr.r_rt);
+}
+
 void stopSealingAfterXBlocks(eth::Client* _c, unsigned _start, unsigned& io_mining)
 {
     try
@@ -165,10 +202,13 @@ bool ExitHandler::s_shouldExit = false;
 
 }
 
+
 int main(int argc, char** argv)
 {
     setDefaultOrCLocale();
 
+    //isSnarkOk();
+    
     // Init secp256k1 context by calling one of the functions.
     toPublic({});
 
@@ -1104,6 +1144,8 @@ int main(int argc, char** argv)
 
         cout << "JSONRPC Admin Session Key: " << jsonAdmin << "\n";
     }
+
+    //isSnarkOk();
 
     for (auto const& p: preferredNodes)
         if (p.second.second)

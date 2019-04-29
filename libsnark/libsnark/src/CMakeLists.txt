@@ -1,6 +1,8 @@
 include_directories(.)
+include_directories(..)
 
 set(SNARK_EXTRALIBS)
+set(CURVE "BN128")
 if(${CURVE} STREQUAL "BN128")
   set(
     SNARK_EXTRALIBS

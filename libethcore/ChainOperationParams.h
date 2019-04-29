@@ -52,7 +52,7 @@ public:
         u256 const& _startingBlock = 0
     );
 
-    bigint cost(bytesConstRef _in) const { return m_cost(_in); }
+    dev::bigint cost(bytesConstRef _in) const { return m_cost(_in); }
     std::pair<bool, bytes> execute(bytesConstRef _in) const { return m_execute(_in); }
 
     u256 const& startingBlock() const { return m_startingBlock; }

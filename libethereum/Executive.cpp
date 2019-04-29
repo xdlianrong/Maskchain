@@ -26,7 +26,16 @@
 #include <libevm/VMFactory.h>
 
 #include <json/json.h>
+
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"/*引用来自donator2同级别的libsnark*/
+#include "libmsksnark/interface.h"
 
 #include <numeric>
 
@@ -85,8 +94,8 @@ bool changesStorage(Instruction _inst)
     return _inst == Instruction::SSTORE;
 }
 
-void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, bigint newMemSize,
-    bigint gasCost, bigint gas, VMFace const* _vm, ExtVMFace const* voidExt)
+void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, dev::bigint newMemSize,
+    dev::bigint gasCost, dev::bigint gas, VMFace const* _vm, ExtVMFace const* voidExt)
 {
     (void)_steps;
 
@@ -259,12 +268,12 @@ void Executive::initialize(Transaction const& _transaction)
             LOG(m_execLogger) << "Sender: " << m_t.sender().hex() << " Invalid Nonce: Require "
                               << nonceReq << " Got " << m_t.nonce();
             m_excepted = TransactionException::InvalidNonce;
-            BOOST_THROW_EXCEPTION(InvalidNonce() << RequirementError((bigint)nonceReq, (bigint)m_t.nonce()));
+            BOOST_THROW_EXCEPTION(InvalidNonce() << RequirementError((dev::bigint)nonceReq, (dev::bigint)m_t.nonce()));
         }
 
         // Avoid unaffordable transactions.
-        bigint gasCost = (bigint)m_t.gas() * m_t.gasPrice();
-        bigint totalCost = m_t.value() + gasCost;
+        dev::bigint gasCost = (dev::bigint)m_t.gas() * m_t.gasPrice();
+        dev::bigint totalCost = m_t.value() + gasCost;
         if (m_s.balance(m_t.sender()) < totalCost)
         {
             LOG(m_execLogger) << "Not enough cash: Require > " << totalCost << " = " << m_t.gas()
@@ -272,9 +281,25 @@ void Executive::initialize(Transaction const& _transaction)
                               << m_s.balance(m_t.sender()) << " for sender: " << m_t.sender();
             m_excepted = TransactionException::NotEnoughCash;
             m_excepted = TransactionException::NotEnoughCash;
-            BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
+            BOOST_THROW_EXCEPTION(NotEnoughCash() << RequirementError(totalCost, (dev::bigint)m_s.balance(m_t.sender())) << errinfo_comment(m_t.sender().hex()));
         }
         m_gasCost = (u256)gasCost;  // Convert back to 256-bit, safe now.
+
+        //*************MARSCAT
+        //std::cout<<"maskashMsg:"<<std::endl<<m_t.maskashMsg<<std::endl<<"------------"<<std::endl;
+        //std::string tmpstr=m_t.maskashMsg();
+        //std::cout<<"\n\n\n\n\nFLAG  01\n\n\n\n\n\n\n\n\n\ntmpstr[tmpstr.lengtth()-1]:"<<tmpstr.substr(0, tmpstr.length())<<"\n\n\n\n\n\n\n\n\n\n";
+
+        msk::mskVerifier m_mskVerifier;
+        bool mskVrifiyStatus = m_mskVerifier.strTxToStructTx(m_t.maskashMsg());
+
+        if (mskVrifiyStatus == 0)
+        {
+            std::cout<<"Maskash verify failed!"<<std::endl;
+            m_excepted = TransactionException::MaskashVerifyFailed;
+            BOOST_THROW_EXCEPTION(msk::MaskashVerifyFailed());
+        }
+
     }
 }
 
@@ -317,7 +342,7 @@ bool Executive::call(CallParameters const& _p, u256 const& _gasPrice, Address co
 
     if (m_sealEngine.isPrecompiled(_p.codeAddress, m_envInfo.number()))
     {
-        bigint g = m_sealEngine.costOfPrecompiled(_p.codeAddress, _p.data, m_envInfo.number());
+        dev::bigint g = m_sealEngine.costOfPrecompiled(_p.codeAddress, _p.data, m_envInfo.number());
         if (_p.gas < g)
         {
             m_excepted = TransactionException::OutOfGasBase;
@@ -431,8 +456,8 @@ OnOpFunc Executive::simpleTrace()
 {
     Logger& traceLogger = m_vmTraceLogger;
 
-    return [&traceLogger](uint64_t steps, uint64_t PC, Instruction inst, bigint newMemSize,
-               bigint gasCost, bigint gas, VMFace const* _vm, ExtVMFace const* voidExt) {
+    return [&traceLogger](uint64_t steps, uint64_t PC, Instruction inst, dev::bigint newMemSize,
+               dev::bigint gasCost, dev::bigint gas, VMFace const* _vm, ExtVMFace const* voidExt) {
         ExtVM const& ext = *static_cast<ExtVM const*>(voidExt);
         auto vm = dynamic_cast<LegacyVM const*>(_vm);
 

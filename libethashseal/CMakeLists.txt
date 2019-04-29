@@ -12,5 +12,5 @@ set(sources
 )
 
 add_library(ethashseal ${sources})
-target_include_directories(ethashseal PRIVATE ../utils)
+target_include_directories(ethashseal PRIVATE ../utils ../build/deps/include ../build/deps/include/libff ../build/deps/include/libsnark)
 target_link_libraries(ethashseal PUBLIC ethereum ethcore)

@@ -26,15 +26,22 @@
 #include "TransactionBase.h"
 #include "EVMSchedule.h"
 
-#include "../libsnark/donator2/interface.hpp"
+#include "libmsksnark/interface.h"
 
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
 using namespace msk;
 
+using namespace libsnark;
+using namespace libff;
+
+using ppT = default_r1cs_ppzksnark_pp; 
+using FieldT = ppT::Fp_type;
+
+int isSnarkStillOk();
 /*
-* Maskash marsCatXdu
+* Maskash marsCatXdumsk::isSnarkOk();
 * web3的 signTransaction 调用了这个
 * 该构造器改造中，正在改造 sign(_s)
 */ 
@@ -49,30 +56,6 @@ TransactionBase::TransactionBase(TransactionSkeleton const& _ts, Secret const& _
 	m_maskashMsg(_ts.maskashMsg),
 	m_sender(_ts.from)
 {
-	/*  Maskash 零知识证明套装测试点，测试完成
-	msk::isSnarkOk();
-	ppT::init_public_params();
-    inhibit_profiling_info = true;
-    inhibit_profiling_counters = true;
-
-    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
-   
-    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
-
-    uint64_t v_1=5;
-    uint64_t v_2=3;
-    uint64_t v_3=0;
-
-    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
-
-    uint256 new_r1=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
-    uint256 new_r2=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
-
-    transferZero tr= makeTransferZero<FieldT>( apk_r, new_r1,new_r2,v_1,ask_s,old_r,v_2);
-    bool t=transferZeroVerify<FieldT>(tr.SNold ,tr.krnew,tr.ksnew, tr.data, tr.pi,tr.vk,tr.c_rt,tr.s_rt,tr.r_rt);
-    cout<<t<<endl;
-	*/
-
 	if (_s)
 		sign(_s);
 }
@@ -266,26 +249,54 @@ h256 TransactionBase::sha3(IncludeSignature _sig) const
 	return ret;
 }
 
+int isSnarkStillOk(){
+    ppT::init_public_params();
+    //using FieldT = ppT::Fp_type;
+    inhibit_profiling_info = true;
+    inhibit_profiling_counters = true;
+
+    uint256 ask_s=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad0");
+   
+    uint256 apk_r=uint256S("038cce42abd366b83ede7e009130de5372cdf73dee8251148cb48d1b9af68ad1");
+
+    uint64_t v_1=5;
+    uint64_t v_2=3;
+    uint64_t v_3=0;
+
+    uint256 old_r=uint256S("038cce42abd366b83ede8e009130de5372cdf73dee2251148cb48d1b4af68a45");
+
+    uint256 new_r1=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+    uint256 new_r2=uint256S("038cce42abd366b83ede9e009130de5372cdf73dee3251148cb48d1b5af68ad0");
+
+    transferZero tr= makeTransferZero<FieldT>( apk_r, new_r1,new_r2,v_1,ask_s,old_r,v_2);
+    bool t=transferZeroVerify<FieldT>(tr.SNold ,tr.krnew,tr.ksnew, tr.data, tr.pi,tr.vk,tr.c_rt,tr.s_rt,tr.r_rt);
+    cout<<t<<endl;
+    return 0;
+ } 
+
+
+/*
 /// 构造：购币者发送给铸币者的 铸币请求 的核心信息
-std::string TransactionBase::makeMintReqString(uint256 Usk, uint256 p, uint256 v) {
-	msk::msgMintRequest mintReq = msk::makeMintRequest(uint256 Usk, uint256 p, uint256 v);
+std::string TransactionBase::makeMintReqString(uint256 Usk, uint256 p, uint64_t v) {
+	msk::msgMintRequest mintReq = msk::makeMintRequest(Usk, p, v);
 	return mskTxTmp;
 }
 
 /// 构造：铸币者发送到网络的 铸币交易 的核心信息
-std::string TransactionBase::makeMintReqString(uint256 kmint, uint256 v, uint256 upk) {
-	msk::msgMint mintMsg = msk::makeMsgMint(uint256 kmint, uint256 v, uint256 upk);
+std::string TransactionBase::makeMintMsgString(uint256 kmint, uint64_t v, uint256 upk) {
+	msk::msgMint mintMsg = msk::makeMsgMint(kmint, v, upk);
 	return mskTxTmp;
 }
 
 /// 构造：零币转账发起者发送到网络的核心信息
-std::string TransactionBase::makeTransferZero(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk, uint256 ps, uint256 vs) {
-	msk::transferZero transerZ = msk::makeTransferZero(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk, uint256 ps, uint256 vs);
+std::string TransactionBase::makeTransferZero(uint256 Rpk, uint256 pr1, uint256 pr2,uint64_t vr, uint256 Ssk, uint256 ps, uint64_t vs) {
+	msk::transferZero transerZ = msk::makeTransferZero<FieldT>(Rpk, pr1, pr2, vr, Ssk, ps, vs);
 	return mskTxTmp;
 }	
 
 /// 构造：整币转账发起者发送到网络的核心信息
-std::string TransactionBase::makeTransferOne(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk) {
-	msk::transferOne transferO = msk::makeTransferOne(uint256 Rpk, uint256 pr, uint256 vr, uint256 Ssk);
+std::string TransactionBase::makeTransferOne(uint256 Rpk, uint256 ps, uint256 pr, uint64_t vr, uint256 Ssk) {
+	msk::transferOne transferO = msk::makeTransferOne<FieldT>(Rpk, ps, pr, vr, Ssk);
 	return mskTxTmp;
 }
+*/
