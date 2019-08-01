@@ -57,6 +57,7 @@ void checkStatus(leveldb::Status const& _status, boost::filesystem::path const& 
     BOOST_THROW_EXCEPTION(ex);
 }
 
+// xdlrdev marscatxdu mark. 用于写库操作
 class LevelDBWriteBatch : public WriteBatchFace
 {
 public:
@@ -100,11 +101,13 @@ leveldb::Options LevelDB::defaultDBOptions()
     return options;
 }
 
+// xdlrdev marscatxdu marked. 在构造该对象时打开数据库。
 LevelDB::LevelDB(boost::filesystem::path const& _path, leveldb::ReadOptions _readOptions,
     leveldb::WriteOptions _writeOptions, leveldb::Options _dbOptions)
   : m_db(nullptr), m_readOptions(std::move(_readOptions)), m_writeOptions(std::move(_writeOptions))
 {
     auto db = static_cast<leveldb::DB*>(nullptr);
+    // Open，存在则打开，不存在则创建
     auto const status = leveldb::DB::Open(_dbOptions, _path.string(), &db);
     checkStatus(status, _path);
 

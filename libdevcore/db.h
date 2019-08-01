@@ -51,6 +51,11 @@ protected:
     WriteBatchFace& operator=(WriteBatchFace&&) = delete;
 };
 
+/**
+ * xdlrdev marscatxdu
+ * 这个应该是直接针对数据库进行操作的接口了
+ * 同模块中的 LevelDB.h 中进行了一波实现
+*/
 class DatabaseFace
 {
 public:
