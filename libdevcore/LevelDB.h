@@ -39,6 +39,14 @@ public:
         leveldb::WriteOptions _writeOptions = defaultWriteOptions(),
         leveldb::Options _dbOptions = defaultDBOptions());
 
+    // xdlrdev marsCatXdu modified. 
+    // 为 Maskash 准备的数据库。添加了一个isMskDB参数，用于指定重载。
+    explicit LevelDB(boost::filesystem::path const& _path,
+        leveldb::ReadOptions _readOptions = defaultReadOptions(),
+        leveldb::WriteOptions _writeOptions = defaultWriteOptions(),
+        leveldb::Options _dbOptions = defaultDBOptions(),
+        bool isMskDB = false);
+
     std::string lookup(Slice _key) const override;
     bool exists(Slice _key) const override;
     void insert(Slice _key, Slice _value) override;

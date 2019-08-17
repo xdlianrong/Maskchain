@@ -1074,6 +1074,8 @@ public:
 
 uint256 combine(const uint256& a, const uint256& b);
 
+
+// merkle tree 的定义及实现，需要找时间进行分离和结构改善。
 class MerkleTree{
 private:
     int _DEEPTH;

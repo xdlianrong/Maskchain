@@ -115,6 +115,23 @@ LevelDB::LevelDB(boost::filesystem::path const& _path, leveldb::ReadOptions _rea
     m_db.reset(db);
 }
 
+
+// xdlrdev marsCatXdu modified. 
+// 为 Maskash 准备的数据库。添加了一个isMskDB参数，用于指定重载。
+LevelDB::LevelDB(boost::filesystem::path const& _path, leveldb::ReadOptions _readOptions,
+    leveldb::WriteOptions _writeOptions, leveldb::Options _dbOptions, bool isMskDB)
+  : m_db(nullptr), m_readOptions(std::move(_readOptions)), m_writeOptions(std::move(_writeOptions))
+{
+    auto db = static_cast<leveldb::DB*>(nullptr);
+    // Open，存在则打开，不存在则创建
+    auto const status = leveldb::DB::Open(_dbOptions, _path.string(), &db);
+    checkStatus(status, _path);
+
+    assert(db);
+    m_db.reset(db);
+}
+
+
 std::string LevelDB::lookup(Slice _key) const
 {
     leveldb::Slice const key(_key.data(), _key.size());

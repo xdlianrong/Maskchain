@@ -148,6 +148,7 @@ enum class Format
 
 // xdlrdev marscatxdu libmsksnark Test. Also the demo for using Maskash snark module
 // libsnark 测试用函数。也可用于 Maskash 的 snark 模块零币转账使用参考。
+// 原始函数由 YandongWei 开发
 void isSnarkOk() {
     ppT::init_public_params();
     //using FieldT = ppT::Fp_type;
