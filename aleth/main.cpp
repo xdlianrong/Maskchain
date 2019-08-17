@@ -178,6 +178,11 @@ void isSnarkOk() {
                                      tr.pi, tr.vk, tr.c_rt, tr.s_rt, tr.r_rt);
 }
 
+void verifyMskTxTest()  // for futhrer dev. msk tx verify functionality test.
+{
+    return 0;
+}
+
 void stopSealingAfterXBlocks(eth::Client* _c, unsigned _start, unsigned& io_mining)
 {
     try
