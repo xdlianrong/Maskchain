@@ -73,6 +73,8 @@ public:
         return result;
     }
 
+    // 这是一个用 boost 拼出来的 base64。
+    // 可是 eth 自己本来也有 base64，要不要统一一下？
     bool Base64Decode( const std::string & input, std::string * output ) {
         typedef boost::archive::iterators::transform_width<boost::archive::iterators::binary_from_base64<std::string::const_iterator>, 8, 6> Base64DecodeIterator;
         std::stringstream result;
@@ -107,6 +109,7 @@ public:
             this->m_msgMint.Sigpub = SigpubS;
             // DEBUGGING!!!
             return 1;
+            // 这下面一个丧心病狂的字符串处理，大概就是拆msk交易吧
         } else if(mskTxS[0]=='Z') { // txType+||+SNoldS+||+krnewS +||+ksnewS +||+proofS +||+dataS +||+\
                                         vkS +||+c_rtS +||+s_rtS+||+r_rtS;
             mskTxS = mskTxS.substr(3);
